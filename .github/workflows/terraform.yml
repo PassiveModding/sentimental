@@ -23,6 +23,7 @@ jobs:
 
       - name: Terraform Format
         run: terraform fmt -check
+        working-directory: ./terraform
 
       - name: Terraform Plan
         id: plan
