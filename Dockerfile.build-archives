@@ -1,0 +1,5 @@
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+RUN apt-get update && apt-get install -y zip
+ENTRYPOINT ["sh", "-c", "dotnet publish -c Release -o /app/build /app/src && cd /app/build && zip -r /app/archive/$OUTPUT_NAME.zip ."]
+ARG OUTPUT_NAME=output
+ENV OUTPUT_NAME=${OUTPUT_NAME}

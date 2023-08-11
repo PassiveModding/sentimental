@@ -1,0 +1,29 @@
+# Ignore Terraform files and directories
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+*.tfvars
+terraform.tfstate*
+*.tf.lock.hcl
+
+# Ignore .NET project files
+*.obj
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.cache
+*.log
+.vscode/
+*.code-workspace
+.vs/
+functions/*/bin/*
+functions/*/obj/*
+/build
+
+# Ignore Visual Studio files
+*.sln
+*.csproj.user
+*.vcxproj.user

@@ -1,0 +1,44 @@
+version: '3'
+services:
+  pubsub-emulator:
+    image: google/cloud-sdk:emulators
+    ports:
+      - "8085:8085"
+    environment:
+      - PUBSUB_PROJECT_ID=sentimental-analysis
+    command: gcloud beta emulators pubsub start --project=sentimental-analysis --host-port=0.0.0.0:8085
+  
+  datastore-emulator:
+    image: google/cloud-sdk:emulators
+    ports:
+      - "8432:8432"
+    environment:
+      - DATASTORE_PROJECT_ID=sentimental-analysis 
+    command: gcloud beta emulators datastore start --project=sentimental-analysis --host-port=0.0.0.0:8432
+
+  producer-app:
+    build:
+      context: ./functions/producer
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8080"
+    environment:
+      - OUTPUT_TOPIC=sentimental-analysis
+      - PROJECT_ID=sentimental-analysis
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+    depends_on:
+      - pubsub-emulator
+
+  consumer-app:
+    build:
+      context: ./functions/consumer
+      dockerfile: Dockerfile
+    environment:
+      - INPUT_TOPIC=sentimental-analysis
+      - PROJECT_ID=sentimental-analysis
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - DATASTORE_EMULATOR_HOST=datastore-emulator:8432
+      - PUSH_ENDPOINT=http://consumer-app:8080
+    depends_on:
+      - pubsub-emulator
+      - datastore-emulator
