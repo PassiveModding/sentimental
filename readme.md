@@ -13,40 +13,51 @@ The application consists of several components that work seamlessly together to 
 Both the producer and consumer functions are deployed using Google Cloud Functions, offering a scalable and serverless architecture.
 
 ## Getting Started
-### Terraform Setup
-To set up the necessary Google Cloud resources, follow these steps:
+### GCloud Setup
+Create a GCP project and enable the following APIs:
+- [Cloud Functions](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com)
+- [Cloud Pub/Sub](https://console.cloud.google.com/apis/library/pubsub.googleapis.com)
+- [Cloud Datastore](https://console.cloud.google.com/apis/library/datastore.googleapis.com)
+- [Cloud Storage](https://console.cloud.google.com/apis/library/storage-component.googleapis.com)
+- [Cloud Natural Language API](https://console.cloud.google.com/apis/library/language.googleapis.com)
+- [Cloud Eventarc API](https://console.cloud.google.com/apis/library/eventarc.googleapis.com) - Used to trigger the consumer function on Pub/Sub events.
 
-1. Create a bucket in your GCP project for backend purposes. This will be used to store the terraform state.
-Update the `main.tf` file with your bucket name.
-2. Create a service account and obtain the JSON key file. Ensure that the service account has the required roles, such as:
-    - Cloud Functions Admin (for deploying the functions)
-    - Pub/Sub Admin (for creating the pubsub topic and subscription)
-    - Storage Admin (for the cloud function code storage bucket)
-    - Datastore User (for accessing the datastore)
-3. Modify the `terraform.auto.tfvars` file with your configuration:
-```bash
-project_id = "your-project-id"
-region = "your-region"
-```
-4. Navigate to the `terraform` directory and run `terraform init`, followed by `terraform apply` to create the required resources.
+Enable Datastore mode for App Engine in the [Data store Settings](https://console.cloud.google.com/datastore/welcome)
 
 ### CI/CD Setup
 The CI/CD pipeline is configured using Github Actions. The workflow is triggered on every push to the `main` branch.
-The workflow consists of the following actions:
-1. Build the dotnet functions for the producer and consumer.
-2. Zip the functions and upload them to the cloud function storage bucket.
+The workflow consists actions for terraform management and cloud function deployment.
+#### Terraform
+To set up the necessary Google Cloud resources, follow these steps:
 
-Setup the following secrets in your Github repository:
-`FUNCTION_STORAGE_SERVICE_ACCOUNT_JSON` - The JSON key file for the service account with the required roles.
-`FUNCTION_STORAGE_BUCKET` - The name of the cloud function storage bucket.
+1. Create a bucket in your GCP project for backend purposes. This will be used to store the terraform state.
+Update the `main.tf`  and fill in the bucket name in the `terraform` block.
+
+2. Create a service account and obtain the JSON key file. Ensure that the service account has the required roles for creating and managing the resources you need.
+In your github repository, create a secret named `TFSTATE_SA_KEY` and paste the contents of the JSON key file. 
+Additionally create variables for `PROJECT_ID` and `REGION` and fill in the values.
+
+#### Cloud Functions
+1. Run `terraform init` to initialize the terraform backend.
+2. Run `terraform plan` to see the changes that will be made.
+3. Run `terraform apply` to create the necessary resources.
+
+### Cloud Testing
+To test the cloud deployment, send a POST request to the producer function with the following bodies:
+```bash
+curl -H "Authorization: bearer $(gcloud auth print-identity-token)" $(terraform output -raw producer_endpoint) --data 'My good review'
+```
+Check cloud datastore to see the results.
+https://console.cloud.google.com/datastore/databases/-default-/entities;kind=Sentiment
+
 
 ### Local Development Environment
 Setting up a functional local deployment environment is streamlined for developers. Utilizing Google's emulator for PubSub and Datastore, you can easily emulate the entire deployment process. 
-The `docker-compose.yml` file provides detailed configuration.
+The `docker-compose-local.yml` file provides detailed configuration.
 
 To start the local deployment, execute the following command:
 ```bash
-docker compose up
+docker compose -f docker-compose-local.yml up
 ```
 
 Try testing the producer function by sending a POST request to `http://localhost:8086` with the following bodies:
@@ -58,3 +69,6 @@ curl -X POST -d 'hello bad world' localhost:8086
 Observe the results in the console or in the Datastore emulator. 
 You should see the sentiment score for each text.
 Note: When using the emulator, we mock the sentiment analysis so if `good` is in the text, the score will be 1, and if `bad` is in the text, the score will be -1 and if neither is in the text, the score will be 0.
+
+
+###
