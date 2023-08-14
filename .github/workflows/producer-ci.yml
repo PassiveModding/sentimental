@@ -1,6 +1,7 @@
 name: Build and zip producer function
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main

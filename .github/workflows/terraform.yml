@@ -1,7 +1,10 @@
 name: Terraform Plan and Manual Apply
 
-on:
+on:  
+  workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - 'terraform/**'
 
