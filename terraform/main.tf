@@ -33,7 +33,7 @@ resource "google_storage_bucket" "bucket" {
 
 # service account with write access to storage bucket
 resource "google_service_account" "service_account" {
-  account_id   = "sentiment-analysis-bucket-writer"
+  account_id   = "sa-bucket-writer"
   display_name = "Sentiment Analysis Bucket Writer"
 }
 
