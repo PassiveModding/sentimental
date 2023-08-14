@@ -2,8 +2,7 @@
 terraform {
   backend "gcs" {
     # must be pre-created
-    bucket = "jaques_tfstate"
-    prefix = "sentimental/state"
+    bucket = "sentimental-analysis-1-0-tfstate"
   }
 }
 
@@ -31,6 +30,20 @@ resource "google_storage_bucket" "bucket" {
   location = var.region
   public_access_prevention = true
 }
+
+# service account with write access to storage bucket
+resource "google_service_account" "service_account" {
+  account_id   = "sentiment-analysis-bucket-writer"
+  display_name = "Sentiment Analysis Bucket Writer"
+}
+
+resource "google_service_account_iam_member" "storage_bucket_writer" {
+  service_account_id = google_service_account.service_account.name
+  role               = "roles/storage.objectCreator"
+  member             = "serviceAccount:${google_service_account.service_account.email}"
+}
+
+
 
 # storage bucket object
 # ---------------------

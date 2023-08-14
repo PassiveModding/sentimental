@@ -12,6 +12,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # import the GCP service account key
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.TFSTATE_SA_KEY }}'
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v1
         with:

@@ -6,6 +6,8 @@
 *.tfvars
 terraform.tfstate*
 *.tf.lock.hcl
+*.secret
+
 
 # Ignore .NET project files
 *.obj
