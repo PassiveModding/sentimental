@@ -24,6 +24,7 @@ terraform.tfstate*
 functions/*/bin/*
 functions/*/obj/*
 /build
+/obj
 
 # Ignore Visual Studio files
 *.sln
