@@ -17,9 +17,9 @@ resource "google_cloudfunctions2_function" "producer" {
   }
 
   service_config {
-    max_instance_count               = 1
-    min_instance_count               = 1
-    timeout_seconds                  = 60
+    max_instance_count = 1
+    min_instance_count = 1
+    timeout_seconds    = 60
 
     ingress_settings               = "ALLOW_ALL"
     all_traffic_on_latest_revision = true
@@ -48,9 +48,9 @@ resource "google_cloudfunctions2_function" "consumer" {
   }
 
   service_config {
-    max_instance_count               = 1
-    min_instance_count               = 1
-    timeout_seconds                  = 60
+    max_instance_count = 1
+    min_instance_count = 1
+    timeout_seconds    = 60
 
     ingress_settings               = "ALLOW_INTERNAL_ONLY"
     all_traffic_on_latest_revision = true

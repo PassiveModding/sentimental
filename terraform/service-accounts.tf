@@ -11,8 +11,8 @@ resource "google_service_account" "consumer" {
 
 # permission for producer function to post to pubsub
 resource "google_pubsub_topic_iam_member" "pubsub_topic_iam_member" {
-  topic = google_pubsub_topic.ingest.name
-  role  = "roles/pubsub.publisher"
+  topic  = google_pubsub_topic.ingest.name
+  role   = "roles/pubsub.publisher"
   member = "serviceAccount:${google_service_account.producer.email}"
 }
 
@@ -30,9 +30,9 @@ resource "google_service_account" "producer_invoker" {
 }
 
 resource "google_cloudfunctions2_function_iam_member" "producer_invoker" {
-  project = var.project_id
-  location = var.region
+  project        = var.project_id
+  location       = var.region
   cloud_function = regex(google_cloudfunctions2_function.producer.name, google_cloudfunctions2_function.producer.id)
-  role    = "roles/cloudfunctions.invoker"
-  member  = "serviceAccount:${google_service_account.producer_invoker.email}"
+  role           = "roles/cloudfunctions.invoker"
+  member         = "serviceAccount:${google_service_account.producer_invoker.email}"
 }
