@@ -26,8 +26,8 @@ resource "random_id" "bucket_id" {
 
 # storage bucket
 resource "google_storage_bucket" "bucket" {
-  name     = "sentiment-analysis-${random_id.bucket_id.hex}"
-  location = var.region
+  name                     = "sentiment-analysis-${random_id.bucket_id.hex}"
+  location                 = var.region
   public_access_prevention = true
 }
 
