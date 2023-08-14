@@ -40,5 +40,6 @@ jobs:
         run: terraform plan -out=tfplan
         working-directory: ./terraform
         env:
-          project_id: ${{ env.PROJECT_ID }}
-          region: ${{ env.REGION }}
+          # TF_VAR_ prefix allows the variables to be passed to Terraform
+          TF_VAR_project_id: ${{ env.PROJECT_ID }}
+          TF_VAR_region: ${{ env.REGION }}
