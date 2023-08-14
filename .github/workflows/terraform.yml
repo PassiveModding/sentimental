@@ -1,4 +1,4 @@
-name: Terraform Plan and Manual Apply
+name: Terraform Plan and Apply
 
 on:  
   workflow_dispatch:
@@ -38,6 +38,15 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: terraform plan -out=tfplan
+        working-directory: ./terraform
+        env:
+          # TF_VAR_ prefix allows the variables to be passed to Terraform
+          TF_VAR_project_id: ${{ env.PROJECT_ID }}
+          TF_VAR_region: ${{ env.REGION }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve tfplan
         working-directory: ./terraform
         env:
           # TF_VAR_ prefix allows the variables to be passed to Terraform
