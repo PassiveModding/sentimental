@@ -9,7 +9,7 @@ resource "google_cloudfunctions2_function" "producer" {
     runtime     = "dotnet6"
     entry_point = "Producer.Function"
     environment_variables = {
-      PROJECT_ID   = data.google_project.project.project_id
+      PROJECT_ID   = var.project_id
       OUTPUT_TOPIC = google_pubsub_topic.topic.name
     }
     source {
@@ -31,7 +31,7 @@ resource "google_cloudfunctions2_function" "producer" {
     service_account_email          = google_service_account.producer.email
     environment_variables = {
       OUTPUT_TOPIC = google_pubsub_topic.topic.name
-      PROJECT_ID   = data.google_project.project.project_id
+      PROJECT_ID   = var.project_id
     }
   }
 }
@@ -45,7 +45,7 @@ resource "google_cloudfunctions2_function" "consumer" {
     runtime     = "dotnet6"
     entry_point = "Consumer.Function"
     environment_variables = {
-      PROJECT_ID = data.google_project.project.project_id
+      PROJECT_ID = var.project_id
     }
     source {
       storage_source {
