@@ -36,3 +36,6 @@ jobs:
         id: plan
         run: terraform plan -out=tfplan
         working-directory: ./terraform
+        env:
+          project_id: ${{ env.PROJECT_ID }}
+          region: ${{ env.REGION }}
