@@ -33,6 +33,6 @@ public class Function : IHttpFunction
         _logger.LogInformation("Message published to {output_topic}: {messageBody}", config.topic, messageBody);
 
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await context.Response.WriteAsync("Message published successfully.");
+        await context.Response.WriteAsync($"Message published to {config.topic}: {messageBody}");
     }
 }
