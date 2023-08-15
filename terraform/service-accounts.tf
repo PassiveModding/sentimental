@@ -2,11 +2,19 @@
 resource "google_service_account" "producer" {
   account_id   = "producer"
   display_name = "producer"
+
+  depends_on = [
+    google_project_service.gcp_services
+  ]
 }
 
 resource "google_service_account" "consumer" {
   account_id   = "consumer"
   display_name = "consumer"
+
+  depends_on = [
+    google_project_service.gcp_services
+  ]
 }
 
 # permission for producer function to post to pubsub
@@ -27,6 +35,10 @@ resource "google_project_iam_member" "project_iam_member" {
 resource "google_service_account" "producer_invoker" {
   account_id   = "producer-invoker"
   display_name = "producer invoker"
+
+  depends_on = [
+    google_project_service.gcp_services
+  ]
 }
 
 resource "google_cloudfunctions2_function_iam_member" "producer_invoker" {

@@ -29,6 +29,10 @@ resource "google_cloudfunctions2_function" "producer" {
       PROJECT_ID   = var.project_id
     }
   }
+
+  depends_on = [
+    google_project_service.gcp_services
+  ]
 }
 
 resource "google_cloudfunctions2_function" "consumer" {
@@ -67,4 +71,8 @@ resource "google_cloudfunctions2_function" "consumer" {
     pubsub_topic   = google_pubsub_topic.ingest.id
     retry_policy   = "RETRY_POLICY_RETRY"
   }
+
+  depends_on = [
+    google_project_service.gcp_services
+  ]
 }
