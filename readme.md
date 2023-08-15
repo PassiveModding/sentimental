@@ -14,19 +14,25 @@ Both the producer and consumer functions are deployed using Google Cloud Functio
 
 ## Getting Started
 ### GCloud Setup
-Create a GCP project and enable the following APIs:
-- [Cloud Functions](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com)
-- [Cloud Pub/Sub](https://console.cloud.google.com/apis/library/pubsub.googleapis.com)
-- [Cloud Datastore](https://console.cloud.google.com/apis/library/datastore.googleapis.com)
-- [Cloud Storage](https://console.cloud.google.com/apis/library/storage-component.googleapis.com)
-- [Cloud Natural Language API](https://console.cloud.google.com/apis/library/language.googleapis.com)
+Create a GCP project and enable the following API:
+- [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) - allows terraform to manage APIs required to run the application.
+
+The following apis are required but will be managed by terraform:
+- [Cloud Functions](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) - Used to deploy the producer and consumer functions.
+- [Cloud Pub/Sub](https://console.cloud.google.com/apis/library/pubsub.googleapis.com) - Used to queue data for processing.
+- [Cloud Datastore](https://console.cloud.google.com/apis/library/datastore.googleapis.com) - Used to store processed data.
+- [Cloud Storage](https://console.cloud.google.com/apis/library/storage-component.googleapis.com) - Used to store the cloud function source code.
+- [Cloud Natural Language API](https://console.cloud.google.com/apis/library/language.googleapis.com) - Used to analyze the sentiment of text data.
 - [Cloud Eventarc API](https://console.cloud.google.com/apis/library/eventarc.googleapis.com) - Used to trigger the consumer function on Pub/Sub events.
+- [Cloud Resource Manager API](https://console.cloud.google.com/apis/library/cloudresourcemanager.googleapis.com)
+- [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com)
 
 Enable Datastore mode for App Engine in the [Data store Settings](https://console.cloud.google.com/datastore/welcome)
 
 ### CI/CD Setup
 The CI/CD pipeline is configured using Github Actions. The workflow is triggered on every push to the `main` branch.
 The workflow consists actions for terraform management and cloud function deployment.
+
 #### Terraform
 To set up the necessary Google Cloud resources, follow these steps:
 
@@ -34,6 +40,7 @@ To set up the necessary Google Cloud resources, follow these steps:
 Update the `main.tf`  and fill in the bucket name in the `terraform` block.
 
 2. Create a service account and obtain the JSON key file. Ensure that the service account has the required roles for creating and managing the resources you need.
+- Note: The service account must 
 In your github repository, create a secret named `TFSTATE_SA_KEY` and paste the contents of the JSON key file. 
 Additionally create variables for `PROJECT_ID` and `REGION` and fill in the values.
 
@@ -71,4 +78,12 @@ You should see the sentiment score for each text.
 Note: When using the emulator, we mock the sentiment analysis so if `good` is in the text, the score will be 1, and if `bad` is in the text, the score will be -1 and if neither is in the text, the score will be 0.
 
 
-###
+### TODO:
+1. Find a way to impersonate the service account while running terraform apply locally
+2. Find a way to set-up and impersonate producer_invoker for testing the producer function
+3. Allow calling the real sentiment analysis api while running locally
+4. Find a way to destroy the datastore resources with terraform destroy (currently this level of granularity is not supported by terraform)
+5. Document the terraform using terraform-docs
+6. Document the code and have a separate readme for the code
+7. Diagrams of the architecture
+8. Images and step-by-step setup for each component
