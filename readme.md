@@ -1,7 +1,7 @@
 # Sentiment Analysis
 
 ## Description
-The Sentiment Analysis Application is a straightforward and efficient tool for analyzing the sentiment of text data using the Google Cloud Natural Language API. The application is designed to process input data through a series of steps, from data ingestion to sentiment analysis, and store the results for further analysis.
+Sentiment Analysis is a straightforward and efficient tool for analyzing the sentiment of text data using the Google Cloud Natural Language API. This application is designed to process input data through a series of steps, from data ingestion to sentiment analysis, and store the results for further analysis.
 
 ## Features
 The application consists of several components that work seamlessly together to achieve sentiment analysis:
@@ -12,12 +12,14 @@ The application consists of several components that work seamlessly together to 
 
 Both the producer and consumer functions are deployed using Google Cloud Functions, offering a scalable and serverless architecture.
 
-## Getting Started
-### GCloud Setup
+## Quickstart
+### GCloud Configuration
+You are required to create a GCP project then enable the Service Usage API, which allows terraform to handle necessary APIs for functioning. Various other APIs will be enabled by terraform for different roles. Navigate to the Datastore Settings to enable Datastore mode for Firestore/App Engine.
+
 Create a GCP project and enable the following API:
 - [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) - allows terraform to manage APIs required to run the application.
 
-The following apis are required but will be managed by terraform:
+The following apis are required but will be enabled by terraform:
 - [Cloud Functions](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) - Used to deploy the producer and consumer functions.
 - [Cloud Pub/Sub](https://console.cloud.google.com/apis/library/pubsub.googleapis.com) - Used to queue data for processing.
 - [Cloud Datastore](https://console.cloud.google.com/apis/library/datastore.googleapis.com) - Used to store processed data.
@@ -27,20 +29,25 @@ The following apis are required but will be managed by terraform:
 - [Cloud Resource Manager API](https://console.cloud.google.com/apis/library/cloudresourcemanager.googleapis.com)
 - [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com)
 
-Enable Datastore mode for App Engine in the [Data store Settings](https://console.cloud.google.com/datastore/welcome)
+Enable Datastore mode for Firestore/App Engine in the [Data store Settings](https://console.cloud.google.com/datastore/welcome)
 
 ### CI/CD Setup
 The CI/CD pipeline is configured using Github Actions. The workflow is triggered on every push to the `main` branch.
-The workflow consists actions for terraform management and cloud function deployment.
+The workflow is designed to deploy the required infrastructure and functions to GCP using terraform.
 
 #### Terraform
-To set up the necessary Google Cloud resources, follow these steps:
+Follow the outlined steps for the creation and management of required Google Cloud resources:
 
-1. Create a bucket in your GCP project for backend purposes. This will be used to store the terraform state.
-Update the `main.tf`  and fill in the bucket name in the `terraform` block.
+1. Create a bucket in your GCP project for backend purposes. This will be used to store the terraform state. Update the `main.tf` and fill in the bucket name in the `terraform` block.
 
 2. Create a service account and obtain the JSON key file. Ensure that the service account has the required roles for creating and managing the resources you need.
-- Note: The service account must 
+- Note: For this deployment, the service account is using the following permissions:
+    Editor
+    Cloud Functions Admin - required for deploying the functions
+    Pub/Sub Admin - required for creating the Pub/Sub topic and subscription
+    Security Admin - required for creating service accounts for the functions
+    Service Account Token Creator - required for impersonating the service account when running terraform locally
+
 In your github repository, create a secret named `TFSTATE_SA_KEY` and paste the contents of the JSON key file. 
 Additionally create variables for `PROJECT_ID` and `REGION` and fill in the values.
 
@@ -48,6 +55,11 @@ Additionally create variables for `PROJECT_ID` and `REGION` and fill in the valu
 1. Run `terraform init` to initialize the terraform backend.
 2. Run `terraform plan` to see the changes that will be made.
 3. Run `terraform apply` to create the necessary resources.
+Note: The CI/CD pipeline will automatically run these steps on pushes to the `main` branch. But you can also run them manually.
+When running locally, you should impersonate the service account to ensure that the correct permissions are used.
+```bash
+gcloud auth activate-service-account --key-file=<path-to-key-file>
+```
 
 ### Cloud Testing
 To test the cloud deployment, send a POST request to the producer function with the following bodies:
@@ -59,12 +71,17 @@ https://console.cloud.google.com/datastore/databases/-default-/entities;kind=Sen
 
 
 ### Local Development Environment
-Setting up a functional local deployment environment is streamlined for developers. Utilizing Google's emulator for PubSub and Datastore, you can easily emulate the entire deployment process. 
-The `docker-compose-local.yml` file provides detailed configuration.
-
-To start the local deployment, execute the following command:
+Setting up a functional local deployment environment is streamlined for developers. Utilizing Google's emulator for PubSub and Datastore, you can easily emulate the deployment. 
+To start the producer and consumer functions, execute the following command:
 ```bash
+docker compose -f docker-compose-local.yml build
 docker compose -f docker-compose-local.yml up
+```
+
+Create the required Pub/Sub topic and subscription:
+```bash
+curl -X PUT "http://localhost:8085/v1/projects/sentimental-analysis/topics/sentimental-analysis"
+curl -X PUT "http://localhost:8085/v1/projects/sentimental-analysis/subscriptions/sentimental-analysis-subscription" -H "Content-Type: application/json" --data '{"topic":"projects/sentimental-analysis/topics/sentimental-analysis","pushConfig":{"pushEndpoint":"http://consumer-app:8080"}}'
 ```
 
 Try testing the producer function by sending a POST request to `http://localhost:8086` with the following bodies:
@@ -76,6 +93,16 @@ curl -X POST -d 'hello bad world' localhost:8086
 Observe the results in the console or in the Datastore emulator. 
 You should see the sentiment score for each text.
 Note: When using the emulator, we mock the sentiment analysis so if `good` is in the text, the score will be 1, and if `bad` is in the text, the score will be -1 and if neither is in the text, the score will be 0.
+
+### Best practices
+1. Use terraform to manage infrastructure
+2. Use CI/CD to automate deployment
+3. Use a service account to manage permissions
+4. 
+
+### What next?
+- Separate functions into their own repositories
+- Deploy functions using their own CI/CD pipelines
 
 
 ### TODO:

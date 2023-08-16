@@ -18,8 +18,6 @@ public class Startup : FunctionsStartup
 
         if (!string.IsNullOrEmpty(emulatorHost))
         {
-            Task.Delay(5000).Wait();
-            CreateTopic(emulatorHost, topicName);
             var client = new PublisherClientBuilder
             {
                 Endpoint = emulatorHost,
@@ -34,24 +32,6 @@ public class Startup : FunctionsStartup
         }
 
         services.AddSingleton(new PublisherConfig(topicName));
-    }
-
-    private static void CreateTopic(string emulatorHost, TopicName topicName)
-    {
-        var publisher = new PublisherServiceApiClientBuilder
-        {
-            Endpoint = emulatorHost,
-            ChannelCredentials = ChannelCredentials.Insecure
-        }.Build();
-
-        try
-        {
-            publisher.CreateTopic(topicName);
-        }
-        catch (RpcException e) when (e.Status.StatusCode == StatusCode.AlreadyExists)
-        {
-            // Topic already exists. Swallow the exception.
-        }
     }
 }
 

@@ -26,19 +26,13 @@ services:
       - OUTPUT_TOPIC=sentimental-analysis
       - PROJECT_ID=sentimental-analysis
       - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
-    depends_on:
-      - pubsub-emulator
 
   consumer-app:
     build:
       context: ./functions/consumer
       dockerfile: Dockerfile
+    ports:
+      - "8087:8080"
     environment:
-      - INPUT_TOPIC=sentimental-analysis
       - PROJECT_ID=sentimental-analysis
-      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
       - DATASTORE_EMULATOR_HOST=datastore-emulator:8432
-      - PUSH_ENDPOINT=http://consumer-app:8080
-    depends_on:
-      - pubsub-emulator
-      - datastore-emulator

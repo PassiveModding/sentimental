@@ -6,6 +6,10 @@ using Google.Cloud.Functions.Hosting;
 
 namespace Producer;
 
+/**
+ * This function is triggered by an HTTP request and publishes a message to a Pub/Sub topic.
+ * The message body is expected to be a string.
+ */
 [FunctionsStartup(typeof(Startup))]
 public class Function : IHttpFunction
 {
