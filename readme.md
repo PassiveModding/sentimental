@@ -12,6 +12,8 @@ The application consists of several components that work seamlessly together to 
 
 Both the producer and consumer functions are deployed using Google Cloud Functions, offering a scalable and serverless architecture.
 
+![Architecture](./images/data_flow_diagram.png)
+
 ## Quickstart
 ### GCloud Configuration
 You are required to create a GCP project then enable the Service Usage API, which allows terraform to handle necessary APIs for functioning. Various other APIs will be enabled by terraform for different roles. Navigate to the Datastore Settings to enable Datastore mode for Firestore/App Engine.
@@ -94,23 +96,42 @@ Observe the results in the console or in the Datastore emulator.
 You should see the sentiment score for each text.
 Note: When using the emulator, we mock the sentiment analysis so if `good` is in the text, the score will be 1, and if `bad` is in the text, the score will be -1 and if neither is in the text, the score will be 0.
 
-### Best practices
-1. Use terraform to manage infrastructure
-2. Use CI/CD to automate deployment
-3. Use a service account to manage permissions
-4. 
+### Questions
+1. Why were Google Cloud Functions chosen as the compute platform? 
+    - Tailored for event-driven applications
+    - The functions are stateless and do not require a server to be running at all times
+    - Compared to Cloud Run the functions are simple enough that the extra complexity of Cloud Run is not needed
 
-### What next?
-- Separate functions into their own repositories
-- Deploy functions using their own CI/CD pipelines
+2. What factors influenced the choice of Google Cloud Pub/Sub for message passing between functions? 
+    - Acts as a buffer between the producer and consumer functions preventing spikes in traffic
+    - Fault tolerance by allowing for retries if the consumer function fails
 
+3. How does the use of Terraform improve the management of infrastructure? 
+    - Versioning of infrastructure, allowing for easy rollback
+    - Infrastructure as code makes it easy to reuse, keep predictable and consistent
+    - Easy to deploy and destroy infrastructure
 
-### TODO:
-1. Find a way to impersonate the service account while running terraform apply locally
-2. Find a way to set-up and impersonate producer_invoker for testing the producer function
-3. Allow calling the real sentiment analysis api while running locally
-4. Find a way to destroy the datastore resources with terraform destroy (currently this level of granularity is not supported by terraform)
-5. Document the terraform using terraform-docs
-6. Document the code and have a separate readme for the code
-7. Diagrams of the architecture
-8. Images and step-by-step setup for each component
+4. What security measures have been implemented to protect the application and its data? 
+    - Both the producer and consumer are deployed using service accounts with the least privilege principle
+    - The producer function only has permission to post to the Pub/Sub topic
+    - The consumer function only has permission to insert into Datastore
+    - The terraform backend is secured using a service account key stored as a GitHub secret
+
+5. How does the GitHub workflow help automate the deployment process and reduce the risk of human error? 
+    - It creates a consistent and predictable deployment process
+    - Using secrets, it allows for secure deployment of infrastructure
+
+6. Are there any scalability considerations for the application's architecture? 
+    - Pub/Sub Scaling - Pub/Sub scales automatically to meet the demands of the application
+    - Cloud Functions Scaling - Cloud Functions scales automatically to meet the demands of the application, functions v2 allows for concurrency reducing the cold start time
+    - Datastore Scaling - Datastore scales automatically to meet the demands of the application
+
+7. Why was datastore chosen as the database for storing sentiment analysis results? 
+    - It is a NoSQL database that is highly scalable and reliable
+    - It is a managed service that does not require any maintenance
+    - Its schemaless nature allows for flexibility in the data model meaning changes can be made without downtime
+
+8. What trade-offs were made in the choice of programming languages and libraries?
+    - C# has client libraries for all the required Google Cloud services
+    - It is a compiled language that is fast and efficient
+
