@@ -44,7 +44,7 @@ resource "google_project_iam_custom_role" "consumer_pubsub_subscriber" {
 
   permissions = [
     "datastore.entities.create"
-  ]  
+  ]
 }
 
 # permission for consumer function to post to datastore
