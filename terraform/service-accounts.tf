@@ -21,7 +21,7 @@ resource "google_service_account" "consumer" {
 
 # custom role for producer function
 resource "google_project_iam_custom_role" "producer_pubsub_publisher" {
-  role_id     = "producer-pubsub-publisher"
+  role_id     = "producer_pubsub_publisher"
   title       = "Producer PubSub Publisher"
   description = "Custom role for producer function to publish to pubsub"
 
@@ -38,7 +38,7 @@ resource "google_pubsub_topic_iam_member" "producer_pubsub_publisher" {
 
 # custom role for consumer function
 resource "google_project_iam_custom_role" "consumer_pubsub_subscriber" {
-  role_id     = "consumer-pubsub-subscriber"
+  role_id     = "consumer_pubsub_subscriber"
   title       = "Consumer PubSub Subscriber"
   description = "Custom role for consumer function to subscribe to pubsub"
 
@@ -57,7 +57,7 @@ resource "google_project_iam_member" "consumer_datastore_owner" {
 
 # custom role to be given to services which need to invoke the producer function
 resource "google_project_iam_custom_role" "producer_invoker" {
-  role_id     = "producer-invoker"
+  role_id     = "producer_invoker"
   title       = "Producer Invoker"
   description = "Custom role for services which need to invoke the producer function"
 
