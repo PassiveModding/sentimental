@@ -8,10 +8,6 @@ resource "google_storage_bucket" "functions" {
   location                 = var.region
   public_access_prevention = "enforced"
   force_destroy            = true
-
-  depends_on = [
-    google_project_service.gcp_services
-  ]
 }
 
 # storage bucket object
