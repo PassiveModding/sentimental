@@ -35,7 +35,9 @@ resource "google_project_iam_custom_role" "consumer_pubsub_subscriber" {
   description = "Custom role for consumer function to subscribe to pubsub"
 
   permissions = [
-    "datastore.entities.create"
+    "datastore.entities.create",
+    "datastore.databases.get",
+    "datastore.databases.create"
   ]
 }
 
