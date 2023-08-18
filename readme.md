@@ -18,18 +18,16 @@ Both the producer and consumer functions are deployed using Google Cloud Functio
 ### GCloud Configuration
 You are required to create a GCP project then enable the Service Usage API, which allows terraform to handle necessary APIs for functioning. Various other APIs will be enabled by terraform for different roles. Navigate to the Datastore Settings to enable Datastore mode for Firestore/App Engine.
 
-Create a GCP project and enable the following API:
+Create a GCP project and enable the following APIs:
 - [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) - allows terraform to manage APIs required to run the application.
-
-The following apis are required but will be enabled by terraform:
-- [Cloud Functions](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) - Used to deploy the producer and consumer functions.
-- [Cloud Pub/Sub](https://console.cloud.google.com/apis/library/pubsub.googleapis.com) - Used to queue data for processing.
-- [Cloud Datastore](https://console.cloud.google.com/apis/library/datastore.googleapis.com) - Used to store processed data.
+- [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com) - allows terraform to manage IAM roles and permissions.
+- [Cloud Functions API](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) - Used to deploy the producer and consumer functions.
+- [Cloud Pub/Sub API](https://console.cloud.google.com/apis/library/pubsub.googleapis.com) - Used to queue data for processing.
+- [Cloud Datastore API](https://console.cloud.google.com/apis/library/datastore.googleapis.com) - Used to store processed data.
 - [Cloud Storage](https://console.cloud.google.com/apis/library/storage-component.googleapis.com) - Used to store the cloud function source code.
 - [Cloud Natural Language API](https://console.cloud.google.com/apis/library/language.googleapis.com) - Used to analyze the sentiment of text data.
-- [Cloud Eventarc API](https://console.cloud.google.com/apis/library/eventarc.googleapis.com) - Used to trigger the consumer function on Pub/Sub events.
+- [Eventarc API](https://console.cloud.google.com/apis/library/eventarc.googleapis.com) - Used to trigger the consumer function on Pub/Sub events.
 - [Cloud Resource Manager API](https://console.cloud.google.com/apis/library/cloudresourcemanager.googleapis.com)
-- [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com)
 
 Enable Datastore mode for Firestore/App Engine in the [Data store Settings](https://console.cloud.google.com/datastore/welcome)
 
