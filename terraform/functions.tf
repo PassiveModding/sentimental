@@ -67,4 +67,8 @@ resource "google_cloudfunctions2_function" "consumer" {
     pubsub_topic   = google_pubsub_topic.ingest.id
     retry_policy   = "RETRY_POLICY_RETRY"
   }
+
+  depends_on = [
+    google_pubsub_topic.ingest
+  ]
 }

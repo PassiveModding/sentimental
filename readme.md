@@ -22,6 +22,8 @@ Create a GCP project and enable the following APIs:
 - [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) - allows terraform to manage APIs required to run the application.
 - [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com) - allows terraform to manage IAM roles and permissions.
 - [Cloud Functions API](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) - Used to deploy the producer and consumer functions.
+- [Cloud Run](https://console.cloud.google.com/apis/library/run.googleapis.com) - Used in the backend of cloud functions
+- [Cloud Build](https://console.developers.google.com/apis/api/cloudbuild.googleapis.com) - Used in the backend of cloud functions.
 - [Cloud Pub/Sub API](https://console.cloud.google.com/apis/library/pubsub.googleapis.com) - Used to queue data for processing.
 - [Cloud Datastore API](https://console.cloud.google.com/apis/library/datastore.googleapis.com) - Used to store processed data.
 - [Cloud Storage](https://console.cloud.google.com/apis/library/storage-component.googleapis.com) - Used to store the cloud function source code.
