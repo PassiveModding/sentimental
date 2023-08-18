@@ -58,7 +58,7 @@ Additionally create variables for `PROJECT_ID` and `REGION` and fill in the valu
 Note: The CI/CD pipeline will automatically run these steps on pushes to the `main` branch. But you can also run them manually.
 When running locally, you should impersonate the service account to ensure that the correct permissions are used.
 ```bash
-gcloud auth activate-service-account --key-file=<path-to-key-file>
+export GOOGLE_CREDENTIALS=$(cat <credentials.json file> | tr -s '\n' ' ')
 ```
 
 ### Cloud Testing
