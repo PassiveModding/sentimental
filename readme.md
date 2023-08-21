@@ -20,6 +20,7 @@ Both the producer and consumer functions are deployed using Google Cloud Functio
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+- [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 
 #### Install Cloud SDK
 The Google Cloud SDK is used to interact with your GCP resources.
@@ -141,6 +142,7 @@ cd terraform
 cp terraform.auto.tfvars.example terraform.auto.tfvars
 sed -i "s/your-project-id/$PROJECT_ID/g" terraform.auto.tfvars
 sed -i "s/your-region/$REGION/g" terraform.auto.tfvars
+terraform fmt
 cat terraform.auto.tfvars
 ```
 ```bash
