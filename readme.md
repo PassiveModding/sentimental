@@ -15,10 +15,36 @@ Both the producer and consumer functions are deployed using Google Cloud Functio
 ![Architecture](./images/data_flow_diagram.png)
 
 ## Quickstart
-### GCloud Configuration
-You are required to create a GCP project then enable the Service Usage API, which allows terraform to handle necessary APIs for functioning. Various other APIs will be enabled by terraform for different roles. Navigate to the Datastore Settings to enable Datastore mode for Firestore/App Engine.
+### Prerequisites
+#### Tools
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
 
-Create a GCP project and enable the following APIs:
+#### Install Cloud SDK
+The Google Cloud SDK is used to interact with your GCP resources.
+[Installation instructions](https://cloud.google.com/sdk/downloads) for multiple platforms are available online.
+
+#### Create a project
+(Optional, you can make use of an existing project)
+```bash
+gcloud projects create sentimental-analysis
+gcloud config set project sentimental-analysis
+```
+
+Set the environment variable for the project id and region
+```bash
+export PROJECT_ID=$(gcloud config get-value project)
+export REGION=australia-southeast2
+```
+
+#### Configure authentication
+```bash
+gcloud auth application-default login
+```
+
+#### Enable GCP APIs
+The following APIs need to be enabled for your project in GCP:
 - [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) - allows terraform to manage APIs required to run the application.
 - [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com) - allows terraform to manage IAM roles and permissions.
 - [Cloud Functions API](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) - Used to deploy the producer and consumer functions.
@@ -31,7 +57,26 @@ Create a GCP project and enable the following APIs:
 - [Eventarc API](https://console.cloud.google.com/apis/library/eventarc.googleapis.com) - Used to trigger the consumer function on Pub/Sub events.
 - [Cloud Resource Manager API](https://console.cloud.google.com/apis/library/cloudresourcemanager.googleapis.com)
 
-Enable Datastore mode for Firestore/App Engine in the [Data store Settings](https://console.cloud.google.com/datastore/welcome)
+The following commands will enable these APIs:
+```bash
+gcloud services enable serviceusage.googleapis.com
+gcloud services enable iam.googleapis.com
+gcloud services enable cloudfunctions.googleapis.com
+gcloud services enable run.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+gcloud services enable pubsub.googleapis.com
+gcloud services enable datastore.googleapis.com
+gcloud services enable storage-component.googleapis.com
+gcloud services enable language.googleapis.com
+gcloud services enable eventarc.googleapis.com
+gcloud services enable cloudresourcemanager.googleapis.com
+```
+
+#### Enable Datastore mode for Firestore/App Engine
+This is a manual step that needs to be done in the GCP console.
+ - [Data store Settings](https://console.cloud.google.com/datastore/welcome)
+
+![Datastore Mode](./images/datastore_mode.png)
 
 ### CI/CD Setup
 The CI/CD pipeline is configured using Github Actions. The workflow is triggered on every push to the `main` branch.
@@ -40,28 +85,70 @@ The workflow is designed to deploy the required infrastructure and functions to 
 #### Terraform
 Follow the outlined steps for the creation and management of required Google Cloud resources:
 
-1. Create a bucket in your GCP project for backend purposes. This will be used to store the terraform state. Update the `main.tf` and fill in the bucket name in the `terraform` block.
+1. Create a bucket in your GCP project for backend purposes.
+```bash
+gsutil mb gs://<bucket-name>
+```
 
-2. Create a service account and obtain the JSON key file. Ensure that the service account has the required roles for creating and managing the resources you need.
-- Note: For this deployment, the service account is using the following permissions:
-    Editor
-    Cloud Functions Admin - required for deploying the functions
-    Pub/Sub Admin - required for creating the Pub/Sub topic and subscription
-    Security Admin - required for creating service accounts for the functions
-    Service Account Token Creator - required for impersonating the service account when running terraform locally
+2. Update the `main.tf` and fill in the bucket name in the `terraform` block.
+```terraform
+terraform {
+  backend "gcs" {
+    # must be pre-created
+    bucket = "<bucket-name>"
+  }
+}
+```
 
+3. Create a service account and obtain the JSON key file. Ensure that the service account has the required roles for creating and managing the resources you need.
+ - Note: For this deployment, the service account is using the following permissions:
+    - Cloud Functions Admin - function deployment
+    - Eventarc Viewer - function event trigger
+    - Pub/Sub Admin - Pub/Sub topic and subscription
+    - Security Admin - Service accounts used by the functions
+    - Role Administrator - Custom roles for the functions
+    - Service Account Admin
+    - Service Account User
+    - Storage Admin - required for cloud build to push the function source code to storage
+
+```bash
+gcloud iam service-accounts create terraform-admin --display-name "Terraform admin account"
+```
+
+```bash
+gcloud projects add-iam-policy-binding $PROJECT_ID --member serviceAccount:terraform-admin@$PROJECT_ID.iam.gserviceaccount.com --role roles/owner
+```
+Note: The `roles/owner` role is used for simplicity, but it will be more secure to create a custom role with the required permissions.
+
+4. Create a JSON key file for the service account and download it.
+```bash
+gcloud iam service-accounts keys create terraform-admin-key.json --iam-account terraform-admin@$PROJECT_ID.iam.gserviceaccount.com
+```
+
+#### Github
 In your github repository, create a secret named `TFSTATE_SA_KEY` and paste the contents of the JSON key file. 
 Additionally create variables for `PROJECT_ID` and `REGION` and fill in the values.
 
-#### Cloud Functions
-1. Run `terraform init` to initialize the terraform backend.
-2. Run `terraform plan` to see the changes that will be made.
-3. Run `terraform apply` to create the necessary resources.
-Note: The CI/CD pipeline will automatically run these steps on pushes to the `main` branch. But you can also run them manually.
-When running locally, you should impersonate the service account to ensure that the correct permissions are used.
+### Deployment
+The CI/CD pipeline will automatically run these steps on pushes to the `main` branch. But you can also run them manually.
+
+When running locally, you should authenticate as the service account rather than using your own credentials.
 ```bash
-export GOOGLE_CREDENTIALS=$(cat <credentials.json file> | tr -s '\n' ' ')
+export GOOGLE_CREDENTIALS=$(cat <terraform-admin-key.json file> | tr -s '\n' ' ')
 ```
+```bash
+cd terraform
+cp terraform.auto.tfvars.example terraform.auto.tfvars
+sed -i "s/your-project-id/$PROJECT_ID/g" terraform.auto.tfvars
+sed -i "s/your-region/$REGION/g" terraform.auto.tfvars
+cat terraform.auto.tfvars
+```
+```bash
+terraform init
+terraform plan --out tfplan
+terraform apply tfplan
+```
+Note: The `GOOGLE_CREDENTIALS` environment variable is used by the terraform provider to authenticate with GCP. It will take precedence over the default application credentials for your shell session.
 
 ### Cloud Testing
 To test the cloud deployment, send a POST request to the producer function with the following bodies:
@@ -134,4 +221,11 @@ Note: When using the emulator, we mock the sentiment analysis so if `good` is in
 8. What trade-offs were made in the choice of programming languages and libraries?
     - C# has client libraries for all the required Google Cloud services
     - It is a compiled language that is fast and efficient
+
+### Troubleshooting
+- Cannot enable APIs
+    - Ensure that you have the required permissions to enable APIs
+    - Ensure that the APIs are available in your region
+    - Ensure that you have linked a billing account to your project
+
 
