@@ -28,23 +28,10 @@ resource "google_pubsub_topic_iam_member" "producer_pubsub_publisher" {
   member = "serviceAccount:${google_service_account.producer.email}"
 }
 
-# custom role for consumer function
-resource "google_project_iam_custom_role" "consumer_pubsub_subscriber" {
-  role_id     = "consumer_pubsub_subscriber"
-  title       = "Consumer PubSub Subscriber"
-  description = "Custom role for consumer function to subscribe to pubsub"
-
-  permissions = [
-    "datastore.entities.create",
-    "datastore.databases.get",
-    "datastore.databases.create"
-  ]
-}
-
 # permission for consumer function to post to datastore
-resource "google_project_iam_member" "consumer_datastore_owner" {
+resource "google_project_iam_member" "consumer_datastore_user" {
   project = var.project_id
-  role    = google_project_iam_custom_role.consumer_pubsub_subscriber.id
+  role    = "roles/datastore.user"
   member  = "serviceAccount:${google_service_account.consumer.email}"
 }
 
