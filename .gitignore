@@ -7,7 +7,7 @@
 terraform.tfstate*
 *.tf.lock.hcl
 *.secret
-
+terraform-admin-key.json
 
 # Ignore .NET project files
 *.obj

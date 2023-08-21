@@ -16,15 +16,19 @@ Both the producer and consumer functions are deployed using Google Cloud Functio
 
 ## Quickstart
 ### Prerequisites
+
 #### Tools
+
+Required tools for deployment:
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+
+Required tools for local development:
+- [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
-- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
-- [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+- [Dotnet 6.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/6.0) (Optional[^dotnet-optional-footnote])
 
-#### Install Cloud SDK
-The Google Cloud SDK is used to interact with your GCP resources.
-[Installation instructions](https://cloud.google.com/sdk/downloads) for multiple platforms are available online.
+[^dotnet-optional-footnote]: Only required if you want to make changes to the producer and consumer functions and test them locally. The dockerfiles are configured to build the functions already.
 
 #### Create a project
 (Optional, you can make use of an existing project)
@@ -33,18 +37,21 @@ gcloud projects create sentimental-analysis
 gcloud config set project sentimental-analysis
 ```
 
-Set the environment variable for the project id and region
+Set the environment variable for the project id and region [^project-id-region-footnote]
+[^project-id-region-footnote]: Note that exporting the variables will only be available for the current shell session. If you restart your shell, you will need to export them again.
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
 export REGION=australia-southeast2
 ```
 
 #### Configure authentication
+
 ```bash
 gcloud auth application-default login
 ```
 
 #### Enable GCP APIs
+
 The following APIs need to be enabled for your project in GCP:
 - [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) - allows terraform to manage APIs required to run the application.
 - [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com) - allows terraform to manage IAM roles and permissions.
@@ -73,22 +80,25 @@ gcloud services enable eventarc.googleapis.com
 gcloud services enable cloudresourcemanager.googleapis.com
 ```
 
-Note: some of these apis require billing to be enabled.
+Note: some of these apis require billing to be enabled. [^billing-footnote]
+[^billing-footnote]: If you have not already enabled billing for your project, you can do so by running the following command: `gcloud beta billing projects link $PROJECT_ID --billing-account=<billing-account-id>`
 
 #### Enable Datastore mode for Firestore/App Engine
-This is a manual step that needs to be done in the GCP console.
+
+This is a manual step that needs to be done in the GCP console.[^datastore-mode-footnote]
+[^datastore-mode-footnote]: Datastore mode is required for the consumer function to be able to write to Datastore. If you do not enable this, you will get an error when the consumer function tries to write to Datastore. You can only have one mode in a project, so if you already have Firestore mode enabled in your project already it may be better to create a new project for this deployment. You can read more about it here: [Datastore Mode](https://cloud.google.com/datastore/docs/firestore-or-datastore#datastore_mode)
  - [Data store Settings](https://console.cloud.google.com/datastore/welcome)
 
 ![Datastore Mode](./images/datastore_mode.png)
 
-### CI/CD Setup
-The CI/CD pipeline is configured using Github Actions. The workflow is triggered on every push to the `main` branch.
-The workflow is designed to deploy the required infrastructure and functions to GCP using terraform.
-
 #### Terraform
+
 Follow the outlined steps for the creation and management of required Google Cloud resources:
 
-1. Create a bucket in your GCP project for backend purposes.
+1. Create a bucket in your GCP project for backend purposes.[^backend-bucket-footnote]
+
+[^backend-bucket-footnote]: The backend bucket is used to store the terraform state file. This is required for terraform to manage the infrastructure. You can read more about it here: [Terraform Backend](https://www.terraform.io/docs/language/settings/backends/gcs.html). You can re-use an existing bucket but ensure that the service account you use has the required permissions to read and write to the bucket.
+
 ```bash
 gsutil mb gs://<bucket-name>
 ```
@@ -103,16 +113,7 @@ terraform {
 }
 ```
 
-3. Create a service account and obtain the JSON key file. Ensure that the service account has the required roles for creating and managing the resources you need.
- - Note: For this deployment, the service account is using the following permissions:
-    - Cloud Functions Admin - function deployment
-    - Eventarc Viewer - function event trigger
-    - Pub/Sub Admin - Pub/Sub topic and subscription
-    - Security Admin - Service accounts used by the functions
-    - Role Administrator - Custom roles for the functions
-    - Service Account Admin
-    - Service Account User
-    - Storage Admin - required for cloud build to push the function source code to storage
+3. Create a service account for terraform to use and give it the required permissions.
 
 ```bash
 gcloud iam service-accounts create terraform-admin --display-name "Terraform admin account"
@@ -121,26 +122,53 @@ gcloud iam service-accounts create terraform-admin --display-name "Terraform adm
 ```bash
 gcloud projects add-iam-policy-binding $PROJECT_ID --member serviceAccount:terraform-admin@$PROJECT_ID.iam.gserviceaccount.com --role roles/owner
 ```
-Note: The `roles/owner` role is used for simplicity, but it will be more secure to create a custom role with the required permissions.
+Note: The `roles/owner` role is used for simplicity, but it will be more secure to create a custom role with the required permissions. For this deployment, the service account is using the following permissions:
+- Cloud Functions Admin - function deployment
+- Eventarc Viewer - function event trigger requirement
+- Pub/Sub Admin - Pub/Sub topic and subscription
+- Role Administrator - Custom roles for the functions
+- Service Account Admin - Create and set policies for service accounts
+- Storage Admin - create and manage storage buckets
 
-4. Create a JSON key file for the service account and download it.
+4. Create a JSON key file for the service account and download it.[^sa-key-footnote]
+[^sa-key-footnote]: The JSON key file is used to authenticate terraform with GCP. There are other ways to authenticate which may be more secure, but this is the simplest way. You can read more about it here: [Terraform Authentication](https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/provider_reference#authentication). DO NOT COMMIT THIS FILE TO SOURCE CONTROL. It is recommended to store it as a GitHub secret.
+
 ```bash
 gcloud iam service-accounts keys create terraform-admin-key.json --iam-account terraform-admin@$PROJECT_ID.iam.gserviceaccount.com
 ```
 
 #### Github
 In your github repository, create a secret named `TFSTATE_SA_KEY` and paste the contents of the JSON key file. 
-Additionally create variables for `PROJECT_ID` and `REGION` and fill in the values.
+Additionally create variables for `PROJECT_ID` and `REGION` and fill in the values. [^github-variables-footnote]
+[^github-variables-footnote]: Variables are separate from secrets and are used to store values that are not sensitive. 
 
 ![Github Secrets](./images/github_secrets.png)
 
-### Deployment
-The CI/CD pipeline will automatically run these steps on pushes to the `main` branch. But you can also run them manually.
+### CI/CD Deployment
+When a commit is pushed to the `main` branch, the CI/CD pipeline will be triggered and the following steps will be executed:
+1. Terraform Init - Initialize the terraform backend
+2. Terraform Format - Ensure the terraform files are formatted correctly
+3. Terraform Plan - Create a plan for the infrastructure deployment
+4. Terraform Apply - Apply the plan and deploy the infrastructure
 
-When running locally, you should authenticate as the service account rather than using your own credentials.
+As part of the terraform plan/appy steps the function source code is ziped and uploaded to a storage bucket. The function is then deployed using the zip file. 
+
+Note: You can manually trigger the workflow by going to the actions tab in your repository and clicking on the `Deploy` workflow.
+
+### Testing the deployment
+To test the cloud deployment, send a POST request to the producer function with the following bodies:
 ```bash
-export GOOGLE_CREDENTIALS=$(cat <terraform-admin-key.json file> | tr -s '\n' ' ')
+curl -H "Authorization: bearer $(gcloud auth print-identity-token)" $(terraform output -raw producer_endpoint) --data 'My good review'
 ```
+Note: you will need to have run `terraform init` to link to your backend locally otherwise you will not have access to `terraform output`. Otherwise you can view the endpoint in the GCP console or the output of github actions.
+
+Check cloud datastore to see the results.
+https://console.cloud.google.com/datastore/databases/-default-/entities;kind=Sentiment
+
+![Datastore](./images/datastore_results.png)
+
+### Deploying terraform from local machine
+Set the environment variable for the project id and region
 ```bash
 cd terraform
 cp terraform.auto.tfvars.example terraform.auto.tfvars
@@ -149,24 +177,26 @@ sed -i "s/your-region/$REGION/g" terraform.auto.tfvars
 terraform fmt
 cat terraform.auto.tfvars
 ```
+
+Give yourself permission to impersonate the service account
+```bash
+gcloud iam service-accounts add-iam-policy-binding terraform-admin@$PROJECT_ID.iam.gserviceaccount.com --member user:$(gcloud config get-value account) --role roles/iam.serviceAccountTokenCreator
+```
+
+Set the environment variable for the service account, terraform will use this to authenticate with GCP[^sa-impersonation-gcp-footnote] 
+
+[^sa-impersonation-gcp-footnote]: GCP Service Account Impersonation in Terraform - https://cloud.google.com/blog/topics/developers-practitioners/using-google-cloud-service-account-impersonation-your-terraform-code
+```bash
+export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=terraform-admin@$PROJECT_ID.iam.gserviceaccount.com
+```
+
+
+
 ```bash
 terraform init
 terraform plan --out tfplan
 terraform apply tfplan
 ```
-Note: The `GOOGLE_CREDENTIALS` environment variable is used by the terraform provider to authenticate with GCP. It will take precedence over the default application credentials for your shell session.
-
-### Cloud Testing
-To test the cloud deployment, send a POST request to the producer function with the following bodies:
-```bash
-curl -H "Authorization: bearer $(gcloud auth print-identity-token)" $(terraform output -raw producer_endpoint) --data 'My good review'
-```
-Note: you will need to have run `terraform init` to link to your backend locally otherwise you will not have access to `terraform output`. Otherwise you can view the endpoint in the GCP console or the output of github actions
-
-Check cloud datastore to see the results.
-https://console.cloud.google.com/datastore/databases/-default-/entities;kind=Sentiment
-
-![Datastore](./images/datastore_results.png)
 
 
 ### Local Development Environment
@@ -193,68 +223,67 @@ Observe the results in the console or in the Datastore emulator.
 You should see the sentiment score for each text.
 Note: When using the emulator, we mock the sentiment analysis so if `good` is in the text, the score will be 1, and if `bad` is in the text, the score will be -1 and if neither is in the text, the score will be 0.
 
-### Questions
-1. Why were Google Cloud Functions chosen as the compute platform? 
-    - Tailored for event-driven applications
-    - The functions are stateless and do not require a server to be running at all times
-    - Compared to Cloud Run the functions are simple enough that the extra complexity of Cloud Run is not needed
+## Data Flow
+The producer function is triggered by an HTTP request. The function then publishes the data to a Pub/Sub topic. The consumer function is triggered by a Pub/Sub event and consumes the data from the topic. The consumer function then uses the Google Cloud Natural Language API to analyze the sentiment of the text data. The results are then stored in Datastore.
 
-2. What factors influenced the choice of Google Cloud Pub/Sub for message passing between functions? 
-    - Acts as a buffer between the producer and consumer functions preventing spikes in traffic
-    - Fault tolerance by allowing for retries if the consumer function fails
+## Infrastructure
+The infrastructure is managed using Terraform. The following resources are created:
+- Cloud Functions
+    - Producer Function - HTTP Function
+    - Consumer Function - Pub/Sub Function
+- Cloud Pub/Sub
+    - Topic - used to queue data for processing
+    - Subscription - used to trigger the consumer function
+- Cloud Datastore
+    - Entity - used to store the sentiment analysis results
+- Cloud Storage
+    - Bucket - used to store the function source code
 
-3. How does the use of Terraform improve the management of infrastructure? 
+### Security
+The following security measures have been implemented:
+- Least privilege principle - the producer and consumer functions are deployed using service accounts with the least privilege principle
+- Terraform backend - the terraform backend is secured using a service account key stored as a GitHub secret
+- GitHub workflow - the GitHub workflow is used to automate the deployment process and reduce the risk of human error
+- Cloud Functions - the functions are deployed using a CI/CD pipeline, so the source code is versioned in GitHub
+
+### Scalability
+The following scalability considerations have been made:
+- Pub/Sub Scaling - Pub/Sub acts as a buffer between the producer and consumer functions preventing spikes in traffic from stressing the consumer function
+- Cloud Functions Scaling - Cloud Functions scales automatically to meet the demands of the application, functions v2 allows for concurrency reducing the cold start time
+- Datastore Scaling - Datastore scales automatically to meet the demands of the application
+- Use of managed services means there is less manual work required to scale the application
+
+### Datastore
+Datastore is used to store the sentiment analysis results. It is a NoSQL database that is highly scalable and reliable. It is a managed service that does not require any maintenance. Its schemaless nature allows for flexibility in the data model meaning changes can be made without downtime.
+
+### Cloud Functions
+Cloud Functions are used to deploy the producer and consumer functions. They are serverless and scale automatically to meet the demands of the application. They are deployed using a CI/CD pipeline, so the source code is versioned in GitHub. The functions are stateless and do not require a server to be running at all times. Compared to Cloud Run the functions are simple enough that the extra complexity of Cloud Run is not needed [^cloud-run-footnote] 
+
+[^cloud-run-footnote]: Cloud Functions uses Cloud Run in the backend, so it is still using the same technology. Cloud Run is more suited for containerized applications that require more control over the environment. Cloud Functions is more suited for simple functions that are triggered by events.
+
+### Cloud Pub/Sub
+Cloud Pub/Sub is used to queue data for processing. It acts as a buffer between the producer and consumer functions preventing spikes in traffic from stressing the consumer function. It also provides fault tolerance by allowing for retries if the consumer function fails [^pubsub-retries-footnote]
+
+[^pubsub-retries-footnote]: Pub/Sub has a retry policy that allows for retries if the consumer function fails. This is useful if the consumer function fails due to a temporary error but is able to process the message successfully on a retry. This is not possible with direct function to function communication. Dead letter queues can also be used to store messages that fail to be processed after a certain number of retries but are not used in this deployment for simplicity.
+
+## Questions
+
+1. How does the use of Terraform improve the management of infrastructure? 
     - Versioning of infrastructure, allowing for easy rollback
     - Infrastructure as code makes it easy to reuse, keep predictable and consistent
     - Easy to deploy and destroy infrastructure
 
-4. What security measures have been implemented to protect the application and its data? 
-    - Both the producer and consumer are deployed using service accounts with the least privilege principle
-    - The producer function only has permission to post to the Pub/Sub topic
-    - The consumer function only has permission to insert into Datastore
-    - The terraform backend is secured using a service account key stored as a GitHub secret
-
-5. How does the GitHub workflow help automate the deployment process and reduce the risk of human error? 
-    - It creates a consistent and predictable deployment process
-    - Using secrets, it allows for secure deployment of infrastructure
-
-6. Are there any scalability considerations for the application's architecture? 
-    - Pub/Sub Scaling - Pub/Sub scales automatically to meet the demands of the application
-    - Cloud Functions Scaling - Cloud Functions scales automatically to meet the demands of the application, functions v2 allows for concurrency reducing the cold start time
-    - Datastore Scaling - Datastore scales automatically to meet the demands of the application
-
-7. Why was datastore chosen as the database for storing sentiment analysis results? 
-    - It is a NoSQL database that is highly scalable and reliable
-    - It is a managed service that does not require any maintenance
-    - Its schemaless nature allows for flexibility in the data model meaning changes can be made without downtime
-
-8. What trade-offs were made in the choice of programming languages and libraries?
-    - C# has client libraries for all the required Google Cloud services
-    - It is a compiled language that is fast and efficient
-
-9. How do I version the functions if the published version is immutable?
+2. How do I version the functions if the published version is immutable?
     - The functions are deployed using a CI/CD pipeline, so the source code is versioned in GitHub
     - Separate the git repository into multiple branches, only merging to the main branch when the code is ready to be deployed
         - Further you can have separate branches for development, staging and production 
 
-### Troubleshooting
-- Cannot enable APIs
-    - Ensure that you have the required permissions to enable APIs
-    - Ensure that the APIs are available in your region
-    - Ensure that you have linked a billing account to your project
+3. What purpose does running local emulators serve?
+    - Allows for easy local development and testing
+    - Allows for easy debugging
+    - Allows for easy integration testing
 
-- Terraform init, plan or apply fails locally
-    - Double check the account you are using to authenticate with GCP
-        - Check `application-default` credentials
-        - Check the `GOOGLE_CREDENTIALS` environment variable
-        - Check `gcloud auth list`
-    - Ensure that you have the required permissions to create and manage the resources
-
-- Terraform init, plan or apply fails in the CI/CD pipeline
-    - Ensure that you have created the `TFSTATE_SA_KEY` secret in GitHub
-    - Ensure that you have created the `PROJECT_ID` and `REGION` variables in GitHub. (Make sure they havent been mistakenly added as secrets instead of variables.)
-    - Ensure that you have the required permissions to create and manage the resources
-    - Ensure you have updated the `main.tf` file with the correct backend bucket name 
-    
-
-
+4. Why use docker/docker-compose for local development instead of running the functions directly?
+    - Dependencies are managed in the dockerfile meaning conflicts are less likely
+    - The environment is consistent across all developers
+    - Easy to deploy and destroy
