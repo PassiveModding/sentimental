@@ -73,6 +73,8 @@ gcloud services enable eventarc.googleapis.com
 gcloud services enable cloudresourcemanager.googleapis.com
 ```
 
+Note: some of these apis require billing to be enabled.
+
 #### Enable Datastore mode for Firestore/App Engine
 This is a manual step that needs to be done in the GCP console.
  - [Data store Settings](https://console.cloud.google.com/datastore/welcome)
@@ -130,6 +132,8 @@ gcloud iam service-accounts keys create terraform-admin-key.json --iam-account t
 In your github repository, create a secret named `TFSTATE_SA_KEY` and paste the contents of the JSON key file. 
 Additionally create variables for `PROJECT_ID` and `REGION` and fill in the values.
 
+![Github Secrets](./images/github_secrets.png)
+
 ### Deployment
 The CI/CD pipeline will automatically run these steps on pushes to the `main` branch. But you can also run them manually.
 
@@ -157,8 +161,12 @@ To test the cloud deployment, send a POST request to the producer function with 
 ```bash
 curl -H "Authorization: bearer $(gcloud auth print-identity-token)" $(terraform output -raw producer_endpoint) --data 'My good review'
 ```
+Note: you will need to have run `terraform init` to link to your backend locally otherwise you will not have access to `terraform output`. Otherwise you can view the endpoint in the GCP console or the output of github actions
+
 Check cloud datastore to see the results.
 https://console.cloud.google.com/datastore/databases/-default-/entities;kind=Sentiment
+
+![Datastore](./images/datastore_results.png)
 
 
 ### Local Development Environment
@@ -224,10 +232,29 @@ Note: When using the emulator, we mock the sentiment analysis so if `good` is in
     - C# has client libraries for all the required Google Cloud services
     - It is a compiled language that is fast and efficient
 
+9. How do I version the functions if the published version is immutable?
+    - The functions are deployed using a CI/CD pipeline, so the source code is versioned in GitHub
+    - Separate the git repository into multiple branches, only merging to the main branch when the code is ready to be deployed
+        - Further you can have separate branches for development, staging and production 
+
 ### Troubleshooting
 - Cannot enable APIs
     - Ensure that you have the required permissions to enable APIs
     - Ensure that the APIs are available in your region
     - Ensure that you have linked a billing account to your project
+
+- Terraform init, plan or apply fails locally
+    - Double check the account you are using to authenticate with GCP
+        - Check `application-default` credentials
+        - Check the `GOOGLE_CREDENTIALS` environment variable
+        - Check `gcloud auth list`
+    - Ensure that you have the required permissions to create and manage the resources
+
+- Terraform init, plan or apply fails in the CI/CD pipeline
+    - Ensure that you have created the `TFSTATE_SA_KEY` secret in GitHub
+    - Ensure that you have created the `PROJECT_ID` and `REGION` variables in GitHub. (Make sure they havent been mistakenly added as secrets instead of variables.)
+    - Ensure that you have the required permissions to create and manage the resources
+    - Ensure you have updated the `main.tf` file with the correct backend bucket name 
+    
 
 
