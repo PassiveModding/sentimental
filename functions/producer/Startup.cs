@@ -12,17 +12,17 @@ public class Startup : FunctionsStartup
     {
         // if pubsub emulator is configured, use it
         var emulatorHost = Environment.GetEnvironmentVariable("PUBSUB_EMULATOR_HOST");
-        var output_topic = Environment.GetEnvironmentVariable("OUTPUT_TOPIC") ?? throw new Exception("OUTPUT_TOPIC not set");
+        var output_topic_id = Environment.GetEnvironmentVariable("OUTPUT_TOPIC_ID") ?? throw new Exception("OUTPUT_TOPIC_ID not set");
         var project_id = Environment.GetEnvironmentVariable("PROJECT_ID") ?? throw new Exception("PROJECT_ID not set");
-        var topicName = new TopicName(project_id, output_topic);
-
+        var topicName = new TopicName(project_id, output_topic_id);
+        
         if (!string.IsNullOrEmpty(emulatorHost))
         {
             var client = new PublisherClientBuilder
             {
                 Endpoint = emulatorHost,
                 ChannelCredentials = ChannelCredentials.Insecure,
-                TopicName = topicName
+                TopicName = topicName          
             }.Build();     
             services.AddSingleton(client);       
         }

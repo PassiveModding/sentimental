@@ -13,7 +13,6 @@ public class Startup : FunctionsStartup
     public override void ConfigureServices(WebHostBuilderContext context, IServiceCollection services)
     {
         var datastoreEmulatorHost = Environment.GetEnvironmentVariable("DATASTORE_EMULATOR_HOST");   
-        
         var project_id = Environment.GetEnvironmentVariable("PROJECT_ID") ?? throw new Exception("PROJECT_ID not set");
                
         if (!string.IsNullOrEmpty(datastoreEmulatorHost))
@@ -23,13 +22,14 @@ public class Startup : FunctionsStartup
             {
                 Endpoint = datastoreEmulatorHost,
                 ChannelCredentials = ChannelCredentials.Insecure,
-                ProjectId = project_id
+                ProjectId = project_id         
             }.Build());
         }
         else
         {
+            var datastore_id = Environment.GetEnvironmentVariable("DATASTORE_ID") ?? throw new Exception("DATASTORE_ID not set");
             services.AddSingleton<ILanguageService, LanguageService>();
-            services.AddSingleton(DatastoreDb.Create(project_id));
+            services.AddSingleton(DatastoreDb.Create(project_id, datastore_id));
         }
     }
 }

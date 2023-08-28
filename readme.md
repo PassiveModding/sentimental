@@ -44,40 +44,20 @@ export PROJECT_ID=$(gcloud config get-value project)
 export REGION=australia-southeast2
 ```
 
-#### Configure authentication
-
-```bash
-gcloud auth application-default login
-```
-
 #### Enable GCP APIs
 
-The following APIs need to be enabled for your project in GCP:
-- [Service Usage API](https://console.cloud.google.com/apis/library/serviceusage.googleapis.com) - allows terraform to manage APIs required to run the application.
-- [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com) - allows terraform to manage IAM roles and permissions.
-- [Cloud Functions API](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) - Used to deploy the producer and consumer functions.
-- [Cloud Run](https://console.cloud.google.com/apis/library/run.googleapis.com) - Used in the backend of cloud functions
-- [Cloud Build](https://console.developers.google.com/apis/api/cloudbuild.googleapis.com) - Used in the backend of cloud functions.
-- [Cloud Pub/Sub API](https://console.cloud.google.com/apis/library/pubsub.googleapis.com) - Used to queue data for processing.
-- [Cloud Datastore API](https://console.cloud.google.com/apis/library/datastore.googleapis.com) - Used to store processed data.
-- [Cloud Storage](https://console.cloud.google.com/apis/library/storage-component.googleapis.com) - Used to store the cloud function source code.
-- [Cloud Natural Language API](https://console.cloud.google.com/apis/library/language.googleapis.com) - Used to analyze the sentiment of text data.
-- [Eventarc API](https://console.cloud.google.com/apis/library/eventarc.googleapis.com) - Used to trigger the consumer function on Pub/Sub events.
-- [Cloud Resource Manager API](https://console.cloud.google.com/apis/library/cloudresourcemanager.googleapis.com)
+The following APIs are required for this deployment:
+- [Identity and Access Management (IAM) API](https://console.cloud.google.com/apis/library/iam.googleapis.com)  allows terraform to manage IAM roles and permissions.
+- [Cloud Resource Manager API](https://console.cloud.google.com/apis/library/cloudresourcemanager.googleapis.com) allows terraform to manage your project.
+- [Pub/Sub API](https://console.cloud.google.com/apis/library/pubsub.googleapis.com) allows terraform to manage pub/sub topics.
+    - [Eventarc API](https://console.cloud.google.com/apis/library/eventarc.googleapis.com) enables cloud function triggers from pub/sub topics.
+- [Cloud Functions API](https://console.cloud.google.com/apis/library/cloudfunctions.googleapis.com) allows terraform to manage cloud functions.
+    - [Cloud Run API](https://console.cloud.google.com/apis/library/run.googleapis.com) required as functions backend
+    - [Cloud Build API](https://console.cloud.google.com/apis/library/cloudbuild.googleapis.com) required for cloud run
 
-The following commands will enable these APIs:
+The following command will enable these APIs:
 ```bash
-gcloud services enable serviceusage.googleapis.com
-gcloud services enable iam.googleapis.com
-gcloud services enable cloudfunctions.googleapis.com
-gcloud services enable run.googleapis.com
-gcloud services enable cloudbuild.googleapis.com
-gcloud services enable pubsub.googleapis.com
-gcloud services enable datastore.googleapis.com
-gcloud services enable storage-component.googleapis.com
-gcloud services enable language.googleapis.com
-gcloud services enable eventarc.googleapis.com
-gcloud services enable cloudresourcemanager.googleapis.com
+gcloud services enable iam.googleapis.com cloudresourcemanager.googleapis.com pubsub.googleapis.com eventarc.googleapis.com cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com
 ```
 
 Note: some of these apis require billing to be enabled. [^billing-footnote]
@@ -103,7 +83,7 @@ Follow the outlined steps for the creation and management of required Google Clo
 gsutil mb gs://<bucket-name>
 ```
 
-2. Update the `main.tf` and fill in the bucket name in the `terraform` block.
+2. Update the `backend.tf` and fill in the bucket name in the `terraform` block.
 ```terraform
 terraform {
   backend "gcs" {
@@ -189,8 +169,6 @@ Set the environment variable for the service account, terraform will use this to
 ```bash
 export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=terraform-admin@$PROJECT_ID.iam.gserviceaccount.com
 ```
-
-
 
 ```bash
 terraform init
