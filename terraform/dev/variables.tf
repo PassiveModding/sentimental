@@ -9,6 +9,6 @@ variable "region" {
 }
 
 variable "datastore_id" {
-  description = "The ID of the datastore to post to"
+  description = "The ID of the datastore to save processed text scores to"
   type        = string
 }
