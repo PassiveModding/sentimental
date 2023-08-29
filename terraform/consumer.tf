@@ -1,5 +1,5 @@
 resource "google_cloudfunctions2_function" "consumer" {
-  name        = "consumer"
+  name        = "consumer-function"
   location    = var.region
   description = "Sentiment analysis function"
 
@@ -8,8 +8,8 @@ resource "google_cloudfunctions2_function" "consumer" {
     entry_point = "Consumer.Function"
     source {
       storage_source {
-        bucket = var.source_archive_bucket
-        object = var.source_archive_name
+        bucket = google_storage_bucket.functions.name
+        object = google_storage_bucket_object.consumer_archive.name
       }
     }
   }
@@ -25,14 +25,13 @@ resource "google_cloudfunctions2_function" "consumer" {
 
     environment_variables = {
       PROJECT_ID = var.project_id
-      #DATASTORE_ID = var.datastore_id
     }
   }
 
   event_trigger {
     trigger_region = var.region
     event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
-    pubsub_topic   = var.ingest_topic_id
+    pubsub_topic   = google_pubsub_topic.ingest.id
     retry_policy   = "RETRY_POLICY_RETRY"
   }
 }

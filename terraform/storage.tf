@@ -2,7 +2,6 @@ resource "random_id" "bucket_id" {
   byte_length = 8
 }
 
-# storage bucket
 resource "google_storage_bucket" "functions" {
   name                     = "sentiment-analysis-${random_id.bucket_id.hex}"
   location                 = var.region

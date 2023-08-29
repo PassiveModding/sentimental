@@ -1,5 +1,5 @@
 resource "google_cloudfunctions2_function" "producer" {
-  name        = "producer"
+  name        = "producer-function"
   location    = var.region
   description = "Sentiment analysis ingest function"
   # Typically this would be restricted but for the purposes of this demo we allow all traffic
@@ -9,8 +9,8 @@ resource "google_cloudfunctions2_function" "producer" {
     entry_point = "Producer.Function"
     source {
       storage_source {
-        bucket = var.source_archive_bucket
-        object = var.source_archive_name
+        bucket = google_storage_bucket.functions.name
+        object = google_storage_bucket_object.producer_archive.name
       }
     }
   }
@@ -24,7 +24,7 @@ resource "google_cloudfunctions2_function" "producer" {
     all_traffic_on_latest_revision = true
     service_account_email          = google_service_account.producer.email
     environment_variables = {
-      OUTPUT_TOPIC_ID = var.output_topic_id
+      OUTPUT_TOPIC_ID = google_pubsub_topic.ingest.id
       PROJECT_ID      = var.project_id
     }
   }
@@ -48,7 +48,7 @@ resource "google_project_iam_custom_role" "producer_pubsub_publisher" {
 }
 
 resource "google_pubsub_topic_iam_member" "producer_pubsub_publisher" {
-  topic  = var.output_topic_id
+  topic  = google_pubsub_topic.ingest.id
   role   = google_project_iam_custom_role.producer_pubsub_publisher.id
   member = "serviceAccount:${google_service_account.producer.email}"
 }
