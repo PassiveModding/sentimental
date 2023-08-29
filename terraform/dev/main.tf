@@ -12,10 +12,10 @@ module "producer_function" {
   project_id = var.project_id
   region     = var.region
 
-  source_archive_bucket  = module.common.source_archive_bucket
-  source_archive_name    = module.common.producer_archive_name
-  output_output_topic_id = module.common.ingest_topic_id
-  function_name          = "producer-function"
+  source_archive_bucket = module.common.source_archive_bucket
+  source_archive_name   = module.common.producer_archive_name
+  output_topic_id       = module.common.ingest_topic_id
+  function_name         = "producer-function"
 
   depends_on = [module.common]
 }
