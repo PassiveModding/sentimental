@@ -181,8 +181,7 @@ terraform apply tfplan
 Setting up a functional local deployment environment is streamlined for developers. Utilizing Google's emulator for PubSub and Datastore, you can easily emulate the deployment. 
 To start the producer and consumer functions, execute the following command:
 ```bash
-docker compose -f docker-compose-local.yml build
-docker compose -f docker-compose-local.yml up
+docker compose up --build
 ```
 
 Create the required Pub/Sub topic and subscription:

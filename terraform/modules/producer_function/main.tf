@@ -24,8 +24,8 @@ resource "google_cloudfunctions2_function" "producer" {
     all_traffic_on_latest_revision = true
     service_account_email          = google_service_account.producer.email
     environment_variables = {
-      OUTPUT_TOPIC = var.output_topic
-      PROJECT_ID   = var.project_id
+      OUTPUT_TOPIC_ID = var.output_topic_id
+      PROJECT_ID      = var.project_id
     }
   }
 }
@@ -48,7 +48,7 @@ resource "google_project_iam_custom_role" "producer_pubsub_publisher" {
 }
 
 resource "google_pubsub_topic_iam_member" "producer_pubsub_publisher" {
-  topic  = var.output_topic
+  topic  = var.output_topic_id
   role   = google_project_iam_custom_role.producer_pubsub_publisher.id
   member = "serviceAccount:${google_service_account.producer.email}"
 }

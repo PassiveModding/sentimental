@@ -14,7 +14,8 @@ public class Startup : FunctionsStartup
         var emulatorHost = Environment.GetEnvironmentVariable("PUBSUB_EMULATOR_HOST");
         var output_topic_id = Environment.GetEnvironmentVariable("OUTPUT_TOPIC_ID") ?? throw new Exception("OUTPUT_TOPIC_ID not set");
         var project_id = Environment.GetEnvironmentVariable("PROJECT_ID") ?? throw new Exception("PROJECT_ID not set");
-        var topicName = new TopicName(project_id, output_topic_id);
+        // get the topic name from the full topic id
+        var topicName = new TopicName(project_id, output_topic_id.Split('/').Last());
         
         if (!string.IsNullOrEmpty(emulatorHost))
         {

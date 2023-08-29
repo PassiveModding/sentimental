@@ -14,7 +14,7 @@ variable "source_archive_name" {
   description = "The name of the source archive"
 }
 
-variable "output_topic" {
+variable "output_topic_id" {
   description = "The name of the output topic"
 }
 

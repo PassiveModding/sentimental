@@ -32,7 +32,7 @@ resource "google_cloudfunctions2_function" "consumer" {
   event_trigger {
     trigger_region = var.region
     event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
-    pubsub_topic   = var.ingest_topic
+    pubsub_topic   = var.ingest_topic_id
     retry_policy   = "RETRY_POLICY_RETRY"
   }
 }
