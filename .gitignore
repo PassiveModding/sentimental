@@ -22,10 +22,9 @@ terraform-admin-key.json
 .vscode/
 *.code-workspace
 .vs/
-functions/*/bin/*
-functions/*/obj/*
-/build
-/obj
+**/bin/*
+**/build/*
+**/obj/*
 
 # Ignore Visual Studio files
 *.sln
