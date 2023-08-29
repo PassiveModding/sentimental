@@ -32,8 +32,8 @@ module "producer_function" {
 module "consumer_function" {
   source = "./modules/consumer_function"
 
-  project_id   = var.project_id
-  region       = var.region
+  project_id = var.project_id
+  region     = var.region
 
   source_archive_bucket = module.common.source_archive_bucket
   source_archive_name   = module.common.consumer_archive_name
