@@ -1,5 +1,14 @@
+terraform {
+  required_version = ">= 0.12.0"
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
 module "common" {
-  source = "../modules/common"
+  source = "./modules/common"
 
   project_id   = var.project_id
   region       = var.region
@@ -7,7 +16,7 @@ module "common" {
 }
 
 module "producer_function" {
-  source = "../modules/producer_function"
+  source = "./modules/producer_function"
 
   project_id = var.project_id
   region     = var.region
@@ -21,7 +30,7 @@ module "producer_function" {
 }
 
 module "consumer_function" {
-  source = "../modules/consumer_function"
+  source = "./modules/consumer_function"
 
   project_id   = var.project_id
   region       = var.region
@@ -33,4 +42,8 @@ module "consumer_function" {
   function_name         = "consumer-function"
 
   depends_on = [module.common]
+}
+
+output "producer_endpoint" {
+  value = module.producer_function.producer_url
 }
