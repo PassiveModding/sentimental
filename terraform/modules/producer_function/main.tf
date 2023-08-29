@@ -48,7 +48,7 @@ resource "google_project_iam_custom_role" "producer_pubsub_publisher" {
 }
 
 resource "google_pubsub_topic_iam_member" "producer_pubsub_publisher" {
-  topic  = var.output_topic
+  topic  = var.output_topic_id
   role   = google_project_iam_custom_role.producer_pubsub_publisher.id
   member = "serviceAccount:${google_service_account.producer.email}"
 }
