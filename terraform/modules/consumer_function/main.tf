@@ -24,7 +24,7 @@ resource "google_cloudfunctions2_function" "consumer" {
     service_account_email          = google_service_account.consumer.email
 
     environment_variables = {
-      PROJECT_ID   = var.project_id
+      PROJECT_ID = var.project_id
       #DATASTORE_ID = var.datastore_id
     }
   }

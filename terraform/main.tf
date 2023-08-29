@@ -34,7 +34,6 @@ module "consumer_function" {
 
   project_id   = var.project_id
   region       = var.region
-  datastore_id = var.datastore_id
 
   source_archive_bucket = module.common.source_archive_bucket
   source_archive_name   = module.common.consumer_archive_name
