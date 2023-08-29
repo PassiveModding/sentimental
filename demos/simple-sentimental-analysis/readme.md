@@ -3,7 +3,7 @@
 ## What is Sentiment Analysis?
 Sentiment analysis is the process of determining whether a piece of writing is positive, negative or neutral. It’s also known as opinion mining, deriving the opinion or attitude of a speaker. A common use case for this technology is to discover how people feel about a particular topic. In this deployment we will use the Google Cloud Natural Language API to perform sentiment analysis on a piece of text.
 
-![Architecture](./images/architecture.png)
+![Architecture](/images/architecture.png)
 
 ## Prerequisites
 This tutorial can be completed entirely in the [Google Cloud Shell](https://console.cloud.google.com/cloudshelleditor). If you prefer to use your local machine, you will need the following:
