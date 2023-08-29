@@ -44,5 +44,5 @@ jobs:
 
       - name: Check datastore for results
         run: |
-          docker compose logs -n 100 | grep -q "Inserted key" || exit 1
+          docker compose logs -n 100 | grep -q "Inserted key" || false
 
