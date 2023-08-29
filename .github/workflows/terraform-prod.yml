@@ -30,7 +30,7 @@ jobs:
           terraform_version: 1.5.4
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -input=false
         working-directory: ./terraform/prod
 
       - name: Terraform Format
@@ -39,19 +39,19 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -out=tfplan -input=false
         working-directory: ./terraform/prod
         env:
           # TF_VAR_ prefix allows the variables to be passed to Terraform
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
           TF_VAR_region: ${{ vars.REGION }}
-          TF_VER_datastore_id: ${{ secrets.DATASTORE_ID }}
+          TF_VER_datastore_id: ${{ vars.DATASTORE_ID }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -input=false -auto-approve tfplan
         working-directory: ./terraform/prod
         env:
           # TF_VAR_ prefix allows the variables to be passed to Terraform
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
           TF_VAR_region: ${{ vars.REGION }}
-          TF_VER_datastore_id: ${{ secrets.DATASTORE_ID }}
+          TF_VER_datastore_id: ${{ vars.DATASTORE_ID }}
