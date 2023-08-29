@@ -27,9 +27,8 @@ public class Startup : FunctionsStartup
         }
         else
         {
-            var datastore_id = Environment.GetEnvironmentVariable("DATASTORE_ID") ?? throw new Exception("DATASTORE_ID not set");
             services.AddSingleton<ILanguageService, LanguageService>();
-            services.AddSingleton(DatastoreDb.Create(project_id, datastore_id));
+            services.AddSingleton(DatastoreDb.Create(project_id));
         }
     }
 }

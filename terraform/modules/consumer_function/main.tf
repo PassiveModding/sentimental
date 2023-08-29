@@ -25,7 +25,7 @@ resource "google_cloudfunctions2_function" "consumer" {
 
     environment_variables = {
       PROJECT_ID   = var.project_id
-      DATASTORE_ID = var.datastore_id
+      #DATASTORE_ID = var.datastore_id
     }
   }
 

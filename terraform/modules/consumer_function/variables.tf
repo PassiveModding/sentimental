@@ -2,10 +2,6 @@ variable "project_id" {
   description = "The project ID to deploy to"
 }
 
-variable "datastore_id" {
-  description = "The ID of the datastore to post to"
-}
-
 variable "region" {
   description = "The region to deploy to"
 }
