@@ -1,7 +1,11 @@
-name: Terraform Plan and Apply
+name: Terraform Dev
 
 on:  
   workflow_dispatch:
+  pull_request:
+    branches:
+      - develop
+      - feature/*
   push:
     branches:
       - develop
@@ -13,6 +17,7 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -30,7 +35,7 @@ jobs:
           terraform_version: 1.5.4
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -input=false
         working-directory: ./terraform/dev
 
       - name: Terraform Format
@@ -39,21 +44,21 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -out=tfplan -input=false
         working-directory: ./terraform/dev
         env:
           # TF_VAR_ prefix allows the variables to be passed to Terraform
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
           TF_VAR_region: ${{ vars.REGION }}
-          TF_VER_datastore_id: ${{ secrets.DATASTORE_ID }}
+          TF_VAR_datastore_id: ${{ vars.DATASTORE_ID }}
 
       - name: Terraform Apply
         # only run on develop branch
         if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -input=false -auto-approve tfplan
         working-directory: ./terraform/dev
         env:
           # TF_VAR_ prefix allows the variables to be passed to Terraform
           TF_VAR_project_id: ${{ vars.PROJECT_ID }}
           TF_VAR_region: ${{ vars.REGION }}
-          TF_VER_datastore_id: ${{ secrets.DATASTORE_ID }}
+          TF_VAR_datastore_id: ${{ vars.DATASTORE_ID }}
