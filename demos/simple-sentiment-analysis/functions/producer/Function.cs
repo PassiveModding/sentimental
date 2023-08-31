@@ -5,10 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Producer;
 
-/**
- * This function is triggered by an HTTP request and publishes a message to a Pub/Sub topic.
- * The message body is expected to be a string.
- */
 public class Function : IHttpFunction
 {
     private readonly ILogger<Function> _logger;
