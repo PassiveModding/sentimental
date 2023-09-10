@@ -38,7 +38,8 @@ public class Function : ICloudEventFunction<MessagePublishedData>
             Key = keyFactory.CreateIncompleteKey(),
             ["created"] = DateTime.UtcNow,
             ["text"] = data.Message.TextData,
-            ["score"] = sentiment
+            ["score"] = sentiment,
+            ["weight"] = sentimentResult.DocumentSentiment.Magnitude
         };
         
         using (var transaction = await db.BeginTransactionAsync())
