@@ -1,0 +1,3 @@
+name: pulumi-sentiment-analysis
+runtime: dotnet
+description: A simple sentiment analysis application

@@ -1,0 +1,3 @@
+config:
+  gcp:project: pulumi-dev-1-397923
+  pulumi-sentiment-analysis:region: australia-southeast2
