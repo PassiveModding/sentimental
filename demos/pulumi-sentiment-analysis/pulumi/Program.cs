@@ -13,7 +13,7 @@ return await Deployment.RunAsync(() =>
     var config = new Config();
     var region = config.Require("region");
     var gcpConfig = new Config("gcp");
-    var project_id = gcpConfig.Require("project");
+    var projectId = gcpConfig.Require("project");
 
     // Create pubsub topic
     var topic = new Topic("sentiment-analysis");
@@ -74,7 +74,7 @@ return await Deployment.RunAsync(() =>
         {
             EnvironmentVariables = new InputMap<string>
             {
-                ["PROJECT_ID"] = project_id,
+                ["PROJECT_ID"] = projectId,
                 ["OUTPUT_TOPIC_ID"] = topic.Id
             }
         }
@@ -113,7 +113,7 @@ return await Deployment.RunAsync(() =>
         {
             EnvironmentVariables = new InputMap<string>
             {
-                ["PROJECT_ID"] = project_id
+                ["PROJECT_ID"] = projectId
             }
         },
         EventTrigger = new FunctionEventTriggerArgs
