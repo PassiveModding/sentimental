@@ -1,6 +1,16 @@
 # Pulumi, Dotnet, GCP, Sentiment Analysis
+## What is Pulumi?
+Pulumi is an Infrastructure as Code (IaC) tool that allows you to define your infrastructure using code. Pulumi supports multiple languages and cloud providers. In this demo we will be using C# and Google Cloud Platform (GCP). Semantically it feels similar to Terraform, however it lets you use your favourite programming language to define your infrastructure. This allows you to leverage the full power of your programming language to define your infrastructure and avoid the limitations of a domain specific language.
+
+Want to try the same deployment using Terraform? Check out my Terraform article [here](https://jaquesy.medium.com/build-a-serverless-sentiment-analysis-app-on-gcp-f184a8900855).
+
 ## What is Sentiment Analysis?
 Sentiment analysis is the process of determining whether a piece of writing is positive, negative or neutral. In this deployment we will use the Google Cloud Natural Language API to perform sentiment analysis on a piece of text.
+
+### Real-world use cases of Sentiment Analysis
+- Brand monitoring: Sentiment analysis can be used to track what people are saying about a brand on social media. This can be used to identify and address negative sentiment and protect the brands reputation.
+- Customer service: Sentiment analysis can be used to analyze customer service interactions such as chat logs or call transcripts to identify where service can be improved.
+- Reviews and feedback: Sentiment analysis can be used to gather feedback from customers about products and services which can be used to improve designs or market products better.
 
 ## Overview
 ![Architecture](/images/architecture.png)
@@ -13,7 +23,23 @@ The application consists of several serverless components that interact with eac
 3. Consumer Function: Responsible for consuming data from the queue, utilizing the Google Cloud Natural Language API for sentiment analysis, and finally storing the processed data.
 4. DataStore: The processed data finds its home here, providing a repository for easy retrieval and analysis.
 
-Both the producer and consumer functions are deployed using Google Cloud Functions and written in dotnet 6 however Cloud Functions supports many [runtimes](https://cloud.google.com/functions/docs/concepts/exec#runtimes). The producer function is triggered by an http request and the consumer function is triggered by a pub/sub message. The producer function sends the message to a pub/sub topic. The consumer function reacts to the pub/sub message, forwarding it to the natural language API for sentiment analysis. After obtaining the sentiment score, the function sends results to datastore.
+Both the producer and consumer functions are deployed using Google Cloud Functions and written in dotnet 6 however Cloud Functions supports many [runtimes](https://cloud.google.com/functions/docs/concepts/exec#runtimes). The producer function is triggered by a http request and the consumer function is triggered by a pub/sub message. The producer function sends the message to a pub/sub topic. The consumer function reacts to the pub/sub message, forwarding it to the natural language API for sentiment analysis. After obtaining the sentiment score, the function sends results to datastore.
+
+### Project Structure
+By the end of this tutorial you should have the following project structure:
+```bash
+consumer
+├── Function.cs
+└── consumer.csproj
+producer
+├── Function.cs
+└── producer.csproj
+pulumi
+├── Program.cs
+├── Pulumi.dev.yaml
+├── Pulumi.yaml
+└── pulumi-sentiment-analysis.csproj
+```
 
 ## Prerequisites
 - [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
@@ -43,18 +69,21 @@ Create the default datastore db
 ```bash
 gcloud alpha firestore databases create --database="(default)" --location="<region>" --type="datastore-mode"
 ```
-Note: Multitenancy for datastore is currently in alpha and lacks support for the dotnet client library, as such we will create the default datastore db outside of our pulumi stack and import it into our stack rather than creating and deleting it as part of our stack.
+> Note: Multitenancy for datastore is currently in alpha and the dotnet client library lacks support for it as of writing, as such we will create and use the default datastore db outside of our Pulumi stack and import it into our stack rather than creating and deleting it as part of our stack.
 
-Authorise the application default login so Pulumi can interact with GCP
+Authorize the application default login so Pulumi can interact with GCP
 ```bash
 gcloud auth application-default login
 ```
 
 ### Building the application
+In this section we will write the code used for the Producer and Consumer functions. Want to skip straight to the Pulumi part? You can find the full source code of the project [here](https://github.com/PassiveModding/sentimental/tree/main/demos/pulumi-sentiment-analysis). Jump to the "Deploying the application" section to continue.
+
 #### Install dotnet function templates
 ```bash
 dotnet new install Google.Cloud.Functions.Templates
 ```
+> Note: This is optional, alternatively you can simply create a `producer.csproj`/`consumer.csproj` and `Function.cs` file in each of the respective directories and copy the supplied code into those files
 
 #### Producer function
 Create a new dotnet http function project (in the project root directory)
@@ -64,7 +93,7 @@ cd producer
 dotnet add package Google.Cloud.PubSub.V1
 ```
 
-Check your .csproj and see if it matches the following:
+Check your `producer/producer.csproj` and see if it matches the following:
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -80,7 +109,7 @@ Check your .csproj and see if it matches the following:
 </Project>
 ```
 
-In the `Function.cs` file add the following code:
+In the `producer/Function.cs` file add the following code:
 ```csharp
 using Google.Cloud.Functions.Framework;
 using Google.Cloud.PubSub.V1;
@@ -141,7 +170,7 @@ dotnet add package Google.Cloud.PubSub.V1
 dotnet add package Google.Events.Protobuf
 ```
 
-Check your .csproj and see if it matches the following:
+Check your `consumer/consumer.csproj` and see if it matches the following:
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -161,7 +190,7 @@ Check your .csproj and see if it matches the following:
 </Project>
 ```
 
-In the `Function.cs` file add the following code:
+In the `consumer/Function.cs` file add the following code:
 ```csharp
 using CloudNative.CloudEvents;
 using Google.Cloud.Datastore.V1;
@@ -224,28 +253,32 @@ public class Function : ICloudEventFunction<MessagePublishedData>
     }
 }
 ```
-Note the changes we made to the template:
-- We changed the class to implement `ICloudEventFunction<MessagePublishedData>` so it can be triggered by a pub/sub message.
-- We added the `MessagePublishedData` as a parameter to the `HandleAsync` method so we can access the pub/sub message data.
-- We made the `HandleAsync` method async so we can use the async pub/sub client methods.
-- We added using statements for the datastore and language client libraries.
+Note the changes made to the template:
+- The event function handler was changed to `ICloudEventFunction<MessagePublishedData>` so it can be triggered by a pub/sub message.
+- `MessagePublishedData` was added as a parameter to the `HandleAsync` method so we can access the pub/sub message data.
+- The `HandleAsync` method was made async so we can use await multiple async methods within the function.
+- Using statements for the required client libraries.
 
 You can check the full code [here](./consumer/Function.cs).
 
-#### Locally testing the functions
-I have a short guide on testing these specific functions locally by using gcloud emulators, docker and docker-compose [here](./testing-locally.md)
+#### Locally testing the functions (optional)
+Supplying a custom endpoint for Pub/Sub and Datastore via the `PUBSUB_EMULATOR_HOST` and `DATASTORE_EMULATOR_HOST` environment variables allows the functions to communicate with a custom endpoint rather than the real Pub/Sub and Datastore services. This allows us to test the functions locally without relying on services deployed to GCP.
 
-We added emulator support to the functions by allowing a custom endpoint for Pub/Sub and Datastore via the `PUBSUB_EMULATOR_HOST` and `DATASTORE_EMULATOR_HOST` environment variables so we can use the emulators instead of the real services. Docker is used to run the emulators and the functions. Docker-compose is used to orchestrate the containers and specify the environment variables.
+Dockerfiles can specify the build steps for our functions so they can be run in containers. We can also setup emulators for Pub/Sub and DataStore using the `google/cloud-sdk:emulators` Docker image. Docker-compose can be used to specify the environment variables and simplify networking between all our dependencies.
+
+For testing the functions locally you can find a guide [here](./testing-locally.md) along with all the source code used for this project.
 
 ### Deploying the application
-Create a new pulumi c# project from the project root directory
+Create a new Pulumi C# project from the project root directory
 ```bash
 mkdir pulumi && cd pulumi
 pulumi new gcp-csharp
 ```
-Note: Pulumi supports multiple different languages and cloud providers, see https://www.pulumi.com/docs/get-started/ for more information.
+> Note: Pulumi supports multiple different languages and cloud providers, see https://www.pulumi.com/docs/get-started/ for more information.
 
-If it's your first time using pulumi you'll be prompted to provide an access token to pulumi cloud, follow the instructions to get a token and paste it into the terminal.
+If it's your first time using Pulumi you'll be prompted to provide an access token to Pulumi cloud, follow the instructions to get a token and paste it into the terminal.
+
+> Note: it is possible to set up a backend other than Pulumi cloud however that is outside the scope of this demo. Read more about Pulumi backends [here](https://www.pulumi.com/docs/concepts/state/).
 
 Follow the prompts to create a new project, I used the following values:
 ```bash
@@ -255,7 +288,7 @@ stack name: dev
 gcp:project: <your gcp project id>
 ```
 
-### Let's take a look at the default project pulumi created for us
+### Let's take a look at the default project Pulumi created for us
 ```csharp
 using Pulumi;
 using Pulumi.Gcp.Storage;
@@ -277,13 +310,23 @@ return await Deployment.RunAsync(() =>
 });
 ```
 
-We can get a basic overview of how pulumi works by looking at this code.
-First we import the pulumi library.
-Then we call `Deployment.RunAsync` to run our pulumi program. Within the Function call we define the resources that we want to create. In this case a storage bucket. We can see that we are creating a new `Bucket` resource and passing in a `BucketArgs` object. This object contains the properties we want to configure on the bucket. We are specifying the location of the bucket as `US`. Finally we are returning a dictionary of outputs we want to see when we run `pulumi up`. In this case we are returning the url of the bucket.
+We can get a basic overview of how Pulumi works by looking at this code.
+Call `Deployment.RunAsync` to run our Pulumi deployment. Within the Function call define the resources to be created. In this case a storage bucket. We can see a new `Bucket` resource is created with `BucketArgs` specifying the properties used to configure the bucket. At the end of the function, return a dictionary of outputs we want to see when we run `pulumi up`. In this case we are returning the url of the bucket.
 
-Let's remove the default code and start from scratch.
+Let's remove the default resources and output from `Deployment.RunAsync` and start from scratch.
+
+```csharp
+using ...;
+
+return await Deployment.RunAsync(() =>
+{
+  // Define Resources and logic here
+});
+```
 
 ## Define infrastructure components
+All code blocks for the configuration can be placed within the `Deployment.RunAsync` anonymous function block. Since this runs sequentially it's good to think about the order in which we want to create our resources in order to satisfy any dependencies between them.
+
 The components we will create are:
 - Pub/Sub Topic
 - Producer Function
@@ -292,36 +335,63 @@ The components we will create are:
 - Datastore Database (We already created this during project setup so we will import it into our stack rather than creating it as part of our stack)
 
 Let's take a moment to think about the dependencies between these components.
-- The producer function depends on the pub/sub topic to exist before it can be created since it needs to know the topic name to publish to.
-- The consumer function depends on the pub/sub topic to exist before it can be created since it needs to know the topic name to subscribe to.
-- The functions depend on the storage bucket to exist before they can be created since they need to pull the function code from the bucket.
-- The datastore database does not depend on any other resources to exist before it can be created.
 - The pub/sub topic does not depend on any other resources to exist before it can be created.
+- The storage bucket does not depend on any other resources to exist before it can be created.
+- The datastore database does not depend on any other resources to exist before it can be created.
+- The producer function depends on the pub/sub topic since it needs to know the topic name to publish messages to, it also needs access to the source code.
+- The consumer function depends on the pub/sub topic to exist before it can be created since it needs to know the topic name to subscribe to, it also needs the source code.
+- The function source code needs the storage bucket to exist before it can be uploaded to the bucket.
 
-We can use this information to think about the order in which we should create our resources. We should create pub/sub topic and storage bucket first since they don't depend on any other resources. Then we can import the datastore database. And lastly we can create the functions since they depend on the datastore database, pub/sub topic and storage bucket.
+```csharp
+using ...;
+
+return await Deployment.RunAsync(() =>
+{
+    // configure inputs
+
+    // define pub/sub topic
+    // define storage bucket
+    // import datastore database
+    // upload producer source code to storage bucket
+    // define producer function
+    // upload consumer source code to storage bucket
+    // define consumer function
+    
+    // return outputs
+});
+```
+
+We can use this information to think about the order in which we should create our resources. We should create pub/sub topic and storage bucket first since they don't depend on any other resources. Then we can import the datastore database. Then we can upload the source code to the storage bucket. And lastly we can create the functions.
 
 ### Configuration
 There are a few variables we will need to specify to configure our stack. 
 We want to deploy some of our resources to a specific region so rather than hardcoding the region we will use the `Config` object to specify the region. We can access the region in our program using the `Config` object.
 
-We already specified the project id when we created the pulumi project so we can access it in our program using the `Config` object. If you go to the `Pulumi.dev.yaml` file in the `config` section you will see the project id is already specified. It has the prefix `gcp` because we specified the project id using the `gcp:project` flag when we created the pulumi project. 
+We already specified the project id when we created the Pulumi project so we can access it in our program using the `Config` object. If you go to the `Pulumi.dev.yaml` file in the `config` section you will see the project id is already specified. It has the prefix `gcp` because we specified the project id using the `gcp:project` flag when we created the Pulumi project. 
 ```csharp
-// access values under the default prefix ie. pulumi-sentiment-analysis:region: <region>
-var config = new Config();
-var region = config.Require("region");
-// access values under the gcp prefix ie. gcp:project: <project_id>
-var gcpConfig = new Config("gcp");
-var project_id = gcpConfig.Require("project");
+using ...
+
+return await Deployment.RunAsync(() =>
+{
+    // access values under the default prefix ie. pulumi-sentiment-analysis:region: <region>
+    var config = new Config();
+    var region = config.Require("region");
+    // access values under the gcp prefix ie. gcp:project: <project_id>
+    var gcpConfig = new Config("gcp");
+    var projectId = gcpConfig.Require("project");
+    ...
+});
 ```
 
-Pulumi will require these variables to be present when we call `pulumi up` and will throw an error if they are not present. You can take a look at the `Pulumi.dev.yaml` file in the `config` section to see the values we specified when we created the pulumi project. We will address adding the region value to the `Pulumi.dev.yaml` file later.
+Pulumi will require these variables to be present when we call `pulumi up` and will throw an error if they are not present. You can take a look at the `Pulumi.dev.yaml` file in the `config` section to see the values we specified when we created the Pulumi project. We will address adding the region value to the `Pulumi.dev.yaml` file later.
 
 ### Infrastructure components
-Within the `Deployment.RunAsync` function we will define the resources we want to create. We will start by creating the pub/sub topic and storage bucket since they don't depend on any other resources.
+After setting up the configuration we can start defining our infrastructure components. Within the `Deployment.RunAsync` function we will define the resources we want to create. We will start by creating the pub/sub topic and storage bucket since they don't depend on any other resources.
 
 ### Pub/Sub
+We don't have any additional args for the Pub/Sub topic so it's definition is pretty simple.
 ```csharp
- var topic = new Topic("sentiment-analysis");
+var topic = new Topic("sentiment-analysis");
 ```
 
 ### Storage Bucket
@@ -333,6 +403,17 @@ var bucket = new Bucket("function-storage-bucket", new BucketArgs
 ```
 
 ### Datastore
+Since we created the datastore database outside of our Pulumi stack we will need to import it into our stack. 
+
+Make sure to add `using Pulumi.Gcp.Firestore;` to the top of the file. There are multiple database offerings under the Gcp provider for things like BigTable or Spanner so we want to make sure we are using the `Firestore` database. 
+
+Create a new `Database` resource and pass in the database id as the first argument. We will use the `DatabaseArgs` object to specify the properties we want to configure on the database. The location should be set to the region config value that we setup at the start.
+
+
+Specify the type of the database as `DATASTORE_MODE` since Firestore will run in firestore mode by default. 
+
+We will use the `CustomResourceOptions` object to specify the settings to import the database. We will set `RetainOnDelete` to true since we want it to exist outside of the Pulumi lifecycle. Set `ImportId` to `(default)` since that is the id of the database we created earlier.
+
 ```csharp
 var dataStore = new Database("(default)", new DatabaseArgs
 {
@@ -346,10 +427,12 @@ var dataStore = new Database("(default)", new DatabaseArgs
 });
 ```
 
-Note using `CustomResourceOptions` lets us specify options that are not a part of the resource schema. In this case we are specifying that we want to retain the database when we delete the stack. This is because deleting the default database will not succeed if it contains entities. Additionally we use `ImportId` to specify the id of the database we want to import since we created it outside of our pulumi stack.
-
 ### Producer Function
-The producer function needs to reference it's source code from the storage bucket, we can do this by creating a new `BucketObject` resource to upload the source code to the bucket. We will use the `FileAsset` class to reference the source code from the local file system.
+The producer function needs to reference it's source code from the storage bucket, we can do this by creating a new `BucketObject` resource to upload the source code to the bucket. The `BucketObject` resource requires the bucket name and the source code. 
+
+Firstly let's create a zip file from the producer function source code. We will use the `ZipFile` class to create the zip file.
+
+We will use the `FileAsset` class to reference the source code from the local file system. In order to keep things consistent and repeatable we will delete the zip file and the bin and obj directories before creating the zip file. 
 ```csharp
 // Make sure we don't already have a zip files in the project root directory
 if (File.Exists("../producer.zip"))
@@ -359,10 +442,14 @@ if (Directory.Exists("../producer/bin"))
     Directory.Delete("../producer/bin", true);
 if (Directory.Exists("../producer/obj"))
     Directory.Delete("../producer/obj", true);
-
 // Zip the producer function source code
 // note, we use CompressionLevel.NoCompression sinze zipping with other methods can be non-deterministic
 ZipFile.CreateFromDirectory("../producer", "../producer.zip", CompressionLevel.NoCompression, false); 
+```
+> Note: We will also use the `CompressionLevel.NoCompression` option to ensure the zip file has the same hash if the source code is the same. This is important since Pulumi will use the hash of the zip file to determine if the source code has changed and needs to be uploaded to the bucket.
+
+Now that we have a zip file we can upload it to the bucket. We will use the `BucketObject` resource to upload the zip file to the bucket. The `BucketObject` resource requires the bucket name and the source code. We will use the `FileAsset` class to reference the source code from the local file system.
+```csharp
 // Upload the producer source code to the bucket
 var producer_source = new BucketObject("producer-source", new BucketObjectArgs
 {
@@ -371,7 +458,15 @@ var producer_source = new BucketObject("producer-source", new BucketObjectArgs
 });   
 ```
 
-Next we need to configure the producer function to use the source code we just uploaded to the bucket. We can do this by referencing the `BucketObject` resource we just created in the `Source` property of the `FunctionBuildConfigArgs` object.
+Next we need create a new function resource.
+
+Firstly add `using Pulumi.Gcp.CloudFunctionsV2;` to the top of the file, this will allow us to create a new function resource. `Function` is also in the `Pulumi.Gcp.CloudFunctions` namespace but we want to use the v2 version of the resource.
+
+We will use the `Function` resource to create a new function. We will use the `FunctionArgs` object to specify the properties we want to configure on the function. We will use the `FunctionBuildConfigArgs` object to specify the build configuration for the function, namely the runtime, entrypoint and source code. 
+
+The source code is provided using the `Source` property where the build config source args can be set to point to a gcp storage bucket. Using the `Bucket` and `BucketObject` we created earlier we can set the function to use the source code we uploaded to the bucket.
+
+The producer function also requires the project id and the pub/sub topic id to be set as environment variables. We can use the `FunctionServiceConfigArgs` object to specify the environment variables. We will use the `InputMap<string>` object to specify the environment variables. The `InputMap<string>` object is a dictionary that allows us to specify the environment variables as key value pairs.
 ```csharp
 var producer_function = new Function("producer-function", new FunctionArgs
 {
@@ -393,14 +488,14 @@ var producer_function = new Function("producer-function", new FunctionArgs
     {
         EnvironmentVariables = new InputMap<string>
         {
-            ["PROJECT_ID"] = project_id,
+            ["PROJECT_ID"] = projectId,
             ["OUTPUT_TOPIC_ID"] = topic.Id
         }
     }
 });
 ```
 
-If we follow this code we
+Following the code we:
 - Create a zip file from the producer function source code
 - Upload the producer source code to the bucket
 - Create a new function resource
@@ -449,7 +544,7 @@ var consumer_function = new Function("consumer-function", new FunctionArgs
     {
         EnvironmentVariables = new InputMap<string>
         {
-            ["PROJECT_ID"] = project_id
+            ["PROJECT_ID"] = projectId
         }
     },
     EventTrigger = new FunctionEventTriggerArgs
@@ -462,6 +557,7 @@ var consumer_function = new Function("consumer-function", new FunctionArgs
 });
 ```
 Note the use of `EventTrigger` to specify that the function should be triggered by a pub/sub message. This will configure a pub/sub subscription for for the function to receive messages from the topic.
+There are plenty of other event triggers in addition to `messagePublished` supported by EventArc, you can see a list of all EventArc event types [here](https://cloud.google.com/eventarc/docs/reference/supported-events).
 
 ### Defining outputs
 This is the last step in defining our infrastructure, we need to define the outputs we want to see when we run `pulumi up`. We will define the outputs for the producer and consumer endpoints.
@@ -475,138 +571,14 @@ return new Dictionary<string, object?>
 ```
 
 ### Let's take a look at the full code
-```csharp
-using Pulumi;
-using Pulumi.Gcp.CloudFunctionsV2;
-using Pulumi.Gcp.CloudFunctionsV2.Inputs;
-using Pulumi.Gcp.Firestore;
-using Pulumi.Gcp.PubSub;
-using Pulumi.Gcp.Storage;
-using System.Collections.Generic;
-using System.IO.Compression;
+[Program.cs](./pulumi/Program.cs)
 
-return await Deployment.RunAsync(() =>
-{
-    var config = new Config();
-    var region = config.Require("region");
-    var gcpConfig = new Config("gcp");
-    var project_id = gcpConfig.Require("project");
-
-    // Create pubsub topic
-    var topic = new Topic("sentiment-analysis");
-
-    // Create a bucket to store the source code
-    var bucket = new Bucket("function-storage-bucket", new BucketArgs
-    {
-        Location = "US"
-    });
-    
-    var dataStore = new Database("(default)", new DatabaseArgs
-    {
-        LocationId = region,
-        Type = "DATASTORE_MODE"
-    }, new CustomResourceOptions
-    {
-        // deleting the default database will not succeed if it contains entities so we retain it
-        RetainOnDelete = true,
-        ImportId = "(default)"
-    });    
-
-    if (System.IO.File.Exists("../producer.zip"))
-    {
-        System.IO.File.Delete("../producer.zip");
-    }
-    
-    ZipFile.CreateFromDirectory("../producer", "../producer.zip");
-
-    // upload the producer and consumer source code to the bucket
-    var producer_source = new BucketObject("producer-source", new BucketObjectArgs
-    {
-        Bucket = bucket.Name,
-        Source = new FileAsset("../producer.zip")
-    });
-    var producer_function = new Function("producer-function", new FunctionArgs
-    {
-        Location = region,
-        BuildConfig = new FunctionBuildConfigArgs
-        {
-            Runtime = "dotnet6",
-            EntryPoint = "Producer.Function",
-            Source = new FunctionBuildConfigSourceArgs
-            {
-                StorageSource = new FunctionBuildConfigSourceStorageSourceArgs
-                {
-                    Bucket = bucket.Name,
-                    Object = producer_source.Name
-                }
-            }
-        },
-        ServiceConfig = new FunctionServiceConfigArgs
-        {
-            EnvironmentVariables = new InputMap<string>
-            {
-                ["PROJECT_ID"] = project_id,
-                ["OUTPUT_TOPIC_ID"] = topic.Id
-            }
-        }
-    });
-
-
-    if (System.IO.File.Exists("../consumer.zip"))
-    {
-        System.IO.File.Delete("../consumer.zip");
-    }
-    ZipFile.CreateFromDirectory("../consumer", "../consumer.zip");
-    var consumer_source = new BucketObject("consumer-source", new BucketObjectArgs
-    {
-        Bucket = bucket.Name,
-        Source = new FileAsset("../consumer.zip")
-    });
-    var consumer_function = new Function("consumer-function", new FunctionArgs
-    {
-        Location = region,
-        BuildConfig = new FunctionBuildConfigArgs
-        {
-            Runtime = "dotnet6",
-            EntryPoint = "Consumer.Function",
-            Source = new FunctionBuildConfigSourceArgs
-            {
-                StorageSource = new FunctionBuildConfigSourceStorageSourceArgs
-                {
-                    Bucket = bucket.Name,
-                    Object = consumer_source.Name
-                }
-            }
-        },
-        ServiceConfig = new FunctionServiceConfigArgs
-        {
-            EnvironmentVariables = new InputMap<string>
-            {
-                ["PROJECT_ID"] = project_id
-            }
-        },
-        EventTrigger = new FunctionEventTriggerArgs
-        {
-            EventType = "google.cloud.pubsub.topic.v1.messagePublished",
-            PubsubTopic = topic.Id,
-            TriggerRegion = region,
-            RetryPolicy = "RETRY_POLICY_DO_NOT_RETRY"
-        }
-    });
-
-    return new Dictionary<string, object?>
-    {
-        ["producer_endpoint"] = producer_function.Url,
-        ["consumer_endpoint"] = consumer_function.Url
-    };
-});
-```
-Note: We could take a more object oriented approach to this design and create classes to share common functionality between the producer and consumer functions. This would allow us to reduce the amount of code we need to write and make it easier to maintain. However for the purposes of this demo we will keep it in a single file.
+> Note: We could take a more object oriented approach to this design and create classes to share common functionality between the producer and consumer functions. This would allow us to reduce the amount of code we need to write and make it easier to maintain. However for the purposes of this demo we will keep it in a single file.
 
 ## Deploying the stack
 Try running `pulumi up` to deploy changes.
 
-You'll notice because we added required config variables to our program, pulumi will notify us that there is Missing required configuration.
+You'll notice because we added required config variables to our program, Pulumi will notify us that there is Missing required configuration.
 
 Add the required configuration to your project.
 ```bash
@@ -616,6 +588,8 @@ pulumi config set pulumi-sentiment-analysis:region <region>
 Notice how this is added to the `Pulumi.dev.yaml` file in the `config` section.
 
 Run `pulumi up` again to deploy the changes.
+
+> Alternatively try `pulumi preview --save-plan=plan.json` to save a plan then use `pulumi up --plan=plan.json` to deploy the plan. You can preview the output in the CLI or in the plan.json file. Read more about update plans [here](https://www.pulumi.com/docs/concepts/update-plans/)
 
 ![Pulumi Up](./images/pulumi_up.png)
 
@@ -638,6 +612,11 @@ If you're happy with the changes, select `yes` to deploy the changes.
 curl -H "Authorization: bearer $(gcloud auth print-identity-token)" --data 'My good review' <producer_endpoint>
 ```
 
+You should see a response from the Producer function. Check datastore to see if the data was saved.
+https://console.cloud.google.com/datastore/databases/-default-/entities;kind=sentiment 
+
+![Datastore Results](./images/datastore_results.png)
+
 ## Make some changes to the application
 In `producer/Function.cs` change the following line
 ```csharp
@@ -645,7 +624,7 @@ await context.Response.WriteAsync($"Message published to {topicName}: {messageBo
 ```
 to
 ```csharp
-await context.Response.WriteAsync($"Message published to {topicName}: {messageBody} - {DateTime.UtcNow}");
+await context.Response.WriteAsync($"[{DateTime.UtcNow}] Message published to {topicName}: {messageBody}");
 ```
 
 ## Redeploy the application
@@ -657,14 +636,30 @@ pulumi up
 ```bash
 curl -H "Authorization: bearer $(gcloud auth print-identity-token)" --data 'My good review' <producer_endpoint>
 ```
-Notice the response now includes a timestamp.
+Notice the response from the producer function now includes a timestamp. You can also check datastore again to see if the data was saved.
 
-## Destroy the stack
+## Clean Up
+After completing this tutorial, you can delete everything that was created so that you don’t incur further costs.
 ```bash
 pulumi down
 ```
+![Pulumi Down](./images/pulumi_down.png)
+![Pulumi Destroy](./images/pulumi_destroy.png)
 
-## Delete the datastore db
+### Delete the datastore database (optional)
+In order to delete the database you will need to delete the entries added by our application. This can be done in the GCP console from the datastore page. Once all the entries have been deleted you can delete the database using the gcloud cli.
 ```bash
 gcloud alpha firestore databases delete --database="(default)"
 ```
+
+## Conclusion
+In this tutorial, we built a sentiment analysis application using Pulumi. We used Pulumi to define our infrastructure as code and deploy it to GCP. We used Pulumi to create a pub/sub topic, storage bucket, datastore database and two cloud functions. We used the GCP console to see the results in datastore. We also used Pulumi to update the application and see the changes in action.
+
+You can find the full source code for this tutorial at: 
+https://github.com/PassiveModding/sentimental/
+
+Try this deployment using Terraform: 
+https://medium.com/@jaquesy/build-a-serverless-sentiment-analysis-app-on-gcp-f184a8900855
+
+Thanks for reading this blog. Please feel free to reach out if you have any questions.
+
